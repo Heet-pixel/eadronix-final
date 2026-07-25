@@ -1,0 +1,337 @@
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --elevated: #1c2128;
+  --border: #30363d;
+  --text: #e6edf3;
+  --sub: #8b949e;
+  --muted: #484f58;
+  --accent: #00d4aa;
+  --blue: #388bfd;
+  --red: #f85149;
+  --r: 12px;
+}
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+body {
+  font-family: "Sora", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap");
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 40px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+.logo {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.sidebar-logo {
+    width: 70px;
+    height: 70px;
+    margin: 0 auto 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+ 
+.sidebar-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+h1{
+  font-size: larger;
+}
+/* .logo h1 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+.logo p { 
+  font-size: 13px;
+  color: var(--sub);
+  margin-top: 4px;
+} */
+.step {
+  display: none;
+}
+.step.active {
+  display: block;
+  animation: fade 0.2s ease;
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.step-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.step-sub {
+  font-size: 12px;
+  color: var(--sub);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+.form-group {
+  margin-bottom: 16px;
+}
+label {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--sub);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+input {
+  width: 100%;
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  color: var(--text);
+  font-family: "Sora", sans-serif;
+  font-size: 14px;
+  padding: 11px 14px;
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.12);
+}
+input::placeholder {
+  color: var(--muted);
+}
+.btn {
+  width: 100%;
+  padding: 12px;
+  background: var(--accent);
+  color: #0d1117;
+  border: none;
+  border-radius: var(--r);
+  font-family: "Sora", sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.btn:hover {
+  filter: brightness(1.08);
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--sub);
+  border: 1px solid var(--border);
+  margin-top: 10px;
+}
+.btn-ghost:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+}
+.otp-grid {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.otp-grid input {
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  font-family: "DM Mono", monospace;
+  padding: 12px 0;
+  letter-spacing: 2px;
+}
+.alert {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  margin-bottom: 14px;
+  display: none;
+}
+.alert.show {
+  display: block;
+}
+.alert-error {
+  background: rgba(248, 81, 73, 0.12);
+  border: 1px solid rgba(248, 81, 73, 0.3);
+  color: #f85149;
+}
+.alert-success {
+  background: rgba(63, 185, 80, 0.12);
+  border: 1px solid rgba(63, 185, 80, 0.3);
+  color: #3fb950;
+}
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 20px;
+}
+.user-chip-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #0099cc);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0d1117;
+  flex-shrink: 0;
+}
+.user-chip-name {
+  font-size: 13px;
+  font-weight: 500;
+}
+.user-chip-role {
+  font-size: 11px;
+  color: var(--sub);
+  text-transform: capitalize;
+}
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(0, 0, 0, 0.3);
+  border-top-color: #0d1117;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.link {
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 12px;
+  text-align: center;
+  display: block;
+  margin-top: 12px;
+}
+.link:hover {
+  text-decoration: underline;
+}
+.pw-wrap {
+  position: relative;
+}
+.pw-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--sub);
+  cursor: pointer;
+  padding: 4px;
+}
+.pw-toggle:hover {
+  color: var(--text);
+}
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 20px 0;
+}
+.timer {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 8px;
+}
+
+/* ── Forgot-password email display box ─────────── */
+.forgot-email-box {
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px 18px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+.forgot-email-icon {
+  font-size: 26px;
+  margin-bottom: 4px;
+}
+.forgot-email-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent);
+  word-break: break-all;
+}
+.forgot-email-note {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* ── Password strength meter ───────────────────── */
+.pw-strength {
+  margin: -4px 0 14px;
+}
+.pw-strength-bar {
+  height: 4px;
+  background: var(--elevated);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+.pw-strength-bar div {
+  height: 100%;
+  border-radius: 2px;
+  transition:
+    width 0.3s,
+    background 0.3s;
+}
+.pw-strength-label {
+  font-size: 11px;
+  font-weight: 500;
+  text-align: right;
+}

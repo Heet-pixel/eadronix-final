@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+  <title>Eadronix — Super Admin</title>
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="apple-touch-icon" href="logo.png">
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+<div id="toast-container"></div>
+<div id="global-loader" class="hidden"><div class="spinner"></div></div>
+
+<div id="app-shell">
+  <div id="sidebar-overlay" onclick="UI.closeSidebar()"></div>
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo"><img src="logo.png"></div>
+      <div><div class="sidebar-brand">Eadronix Platform</div><div class="sidebar-tagline">Super Admin</div></div>
+      <button class="sidebar-close-btn" onclick="UI.closeSidebar()">
+        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+      </button>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Overview</div>
+      <button class="nav-item active" data-section="dashboard" onclick="Dashboard.load()">
+        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/></svg>
+        Dashboard
+      </button>
+      <div class="nav-label">Management</div>
+      <button class="nav-item" data-section="colleges" onclick="Colleges.load()">
+        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z" clip-rule="evenodd"/></svg>
+        Colleges
+      </button>
+      <div class="nav-label">Reports</div>
+      <button class="nav-item" data-section="analytics" onclick="Analytics.load()">
+        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>
+        Analytics
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar"><span id="sidebar-user-initials">SA</span></div>
+        <div><div class="sidebar-user-name" id="sidebar-user-name">Super Admin</div><div class="sidebar-user-role" id="sidebar-user-role">Administrator</div></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:8px" onclick="UI.logout()">
+        <svg viewBox="0 0 20 20" fill="currentColor" style="width:14px;height:14px"><path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd"/></svg>
+        Logout
+      </button>
+    </div>
+  </aside>
+
+  <div id="main-content">
+    <header id="top-header">
+      <button class="hamburger-btn" onclick="UI.toggleSidebar()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <span id="page-title">Dashboard</span>
+      <div class="header-actions">
+        <button class="btn btn-primary" onclick="UI.openModal('modal-create-college')">
+          <svg viewBox="0 0 20 20" fill="currentColor" style="width:14px;height:14px"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+          <span class="btn-label">New College</span>
+        </button>
+      </div>
+    </header>
+
+    <main id="content-area">
+      <!-- DASHBOARD -->
+      <section id="section-dashboard" class="content-section">
+        <div class="page-header">
+          <div><h2 class="page-title">Dashboard</h2><p class="page-sub">Platform overview</p></div>
+          <button class="btn btn-ghost" onclick="Dashboard.load()">
+            <svg viewBox="0 0 20 20" fill="currentColor" style="width:14px;height:14px"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/></svg>
+            Refresh
+          </button>
+        </div>
+        <div id="dash-stats-grid"></div>
+        <div class="dash-grid">
+          <div class="dash-card">
+            <div class="dash-card-header"><span class="dash-card-title">Recent Colleges</span><button class="btn btn-ghost btn-sm" onclick="Colleges.load()">View all</button></div>
+            <div class="dash-card-body" id="dash-recent-list"></div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-card-header"><span class="dash-card-title">Quick Actions</span></div>
+            <div style="display:flex;flex-direction:column;gap:8px;padding:14px">
+              <button class="btn btn-primary" style="justify-content:center" onclick="UI.openModal('modal-create-college')">
+                <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>Create College
+              </button>
+              <button class="btn btn-secondary" style="justify-content:center" onclick="Colleges.load()">
+                <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z" clip-rule="evenodd"/></svg>Manage Colleges
+              </button>
+              <button class="btn btn-secondary" style="justify-content:center" onclick="Analytics.load()">
+                <svg viewBox="0 0 20 20" fill="currentColor"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>View Analytics
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- COLLEGES -->
+      <section id="section-colleges" class="content-section hidden">
+        <div class="page-header">
+          <div><h2 class="page-title">Colleges <span class="count-badge" id="college-count-badge">0</span></h2><p class="page-sub">Manage all colleges</p></div>
+          <button class="btn btn-primary" onclick="UI.openModal('modal-create-college')">
+            <svg viewBox="0 0 20 20" fill="currentColor" style="width:14px;height:14px"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+            <span class="btn-label">New College</span>
+          </button>
+        </div>
+        <div class="toolbar">
+          <div class="search-wrap"><span class="search-icon"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/></svg></span>
+            <input type="text" id="college-search" class="search-input" placeholder="Search name, code, email…"/>
+          </div>
+          <div class="filter-tabs" id="colleges-filter-tabs">
+            <button class="filter-tab active" data-filter="all">All</button>
+            <button class="filter-tab" data-filter="active">Active</button>
+            <button class="filter-tab" data-filter="inactive">Inactive</button>
+          </div>
+        </div>
+        <div class="table-wrap"><table class="data-table">
+          <thead><tr><th>College</th><th>Code</th><th>Depts</th><th>Principals</th><th>Created</th><th>Status</th></tr></thead>
+          <tbody id="colleges-tbody"></tbody>
+        </table></div>
+        <div id="colleges-pagination"></div>
+      </section>
+
+      <!-- COLLEGE DETAIL -->
+      <section id="section-college-detail" class="content-section hidden">
+        <button class="back-btn" onclick="Colleges.load()">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd"/></svg>
+          Back to Colleges
+        </button>
+        <div class="detail-header">
+          <div class="detail-avatar" id="detail-college-initials">—</div>
+          <div style="flex:1;min-width:0">
+            <h2 class="detail-college-name" id="detail-college-name">Loading…</h2>
+            <div class="detail-college-code" id="detail-college-code"></div>
+            <div class="detail-meta-row"><span id="detail-college-status"></span><span id="detail-quick-stats" style="display:contents"></span></div>
+          </div>
+        </div>
+        <div class="tab-bar">
+          <button class="tab-btn active" data-tab="overview"    onclick="CollegeDetail.switchTab('overview')">Overview</button>
+          <button class="tab-btn"        data-tab="departments" onclick="CollegeDetail.switchTab('departments')">Departments</button>
+          <button class="tab-btn"        data-tab="people"      onclick="CollegeDetail.switchTab('people')">People</button>
+          <button class="tab-btn"        data-tab="students"    onclick="CollegeDetail.switchTab('students')">Students</button>
+        </div>
+        <div id="tab-overview"    class="tab-pane"></div>
+        <div id="tab-departments" class="tab-pane hidden"></div>
+        <div id="tab-people"      class="tab-pane hidden"></div>
+        <div id="tab-students"    class="tab-pane hidden"></div>
+      </section>
+
+      <!-- DEPT DETAIL -->
+      <section id="section-dept-detail" class="content-section hidden">
+        <button class="back-btn" id="dept-back-btn">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd"/></svg>
+          Back to <span id="dept-back-label">College</span>
+        </button>
+        <div class="dept-detail-header">
+          <div class="dept-detail-avatar" id="dept-detail-code">—</div>
+          <div style="flex:1;min-width:0">
+            <h2 class="dept-detail-name" id="dept-detail-name">Loading…</h2>
+            <div class="dept-detail-college" id="dept-detail-college"></div>
+            <div class="dept-detail-stats-row" id="dept-detail-stats"></div>
+          </div>
+        </div>
+        <div id="dept-detail-body"></div>
+      </section>
+
+      <!-- ANALYTICS -->
+      <section id="section-analytics" class="content-section hidden">
+        <div class="page-header">
+          <div><h2 class="page-title">Analytics</h2><p class="page-sub">Platform-wide statistics</p></div>
+          <button class="btn btn-ghost" onclick="Analytics.load()">
+            <svg viewBox="0 0 20 20" fill="currentColor" style="width:14px;height:14px"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/></svg>
+            Refresh
+          </button>
+        </div>
+        <div id="analytics-content"></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- ═══ MODALS ═══════════════════════════════════════════════════════ -->
+<div id="modal-edit-college" class="modal"><div class="modal-box">
+  <div class="modal-header"><div><div class="modal-title">Edit College</div><div class="modal-subtitle">Update this college's details.</div></div>
+  <button class="modal-close" onclick="UI.closeModal('modal-edit-college')"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg></button></div>
+  <form id="form-edit-college"><input type="hidden" id="ec-id"><div class="modal-body" style="max-height:70vh;overflow-y:auto;padding-right:4px">
+    <div class="form-section">College Info</div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Name *</label><input class="form-input" id="ec-name" required placeholder="Sardar Patel College of Engineering"/></div>
+    <div class="form-group"><label class="form-label">Code *</label><input class="form-input" id="ec-code" required placeholder="SPCE" maxlength="10" style="text-transform:uppercase"/></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Email</label><input class="form-input" id="ec-email" type="email" placeholder="info@college.ac.in"/></div>
+    <div class="form-group"><label class="form-label">Phone</label><input class="form-input" id="ec-phone" placeholder="+91 XXXXX XXXXX"/></div></div>
+    <div class="form-group"><label class="form-label">Website</label><input class="form-input" id="ec-website" placeholder="www.college.ac.in"/></div>
+    <div class="form-section">Address</div>
+    <div class="form-group"><label class="form-label">Street</label><input class="form-input" id="ec-street" placeholder="Street address"/></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">City</label><input class="form-input" id="ec-city" placeholder="Ahmedabad"/></div>
+    <div class="form-group"><label class="form-label">State</label><input class="form-input" id="ec-state" placeholder="Gujarat"/></div></div>
+    <div class="form-group"><label class="form-label">Pincode</label><input class="form-input" id="ec-pincode" placeholder="380015" maxlength="10"/></div>
+  </div><div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="UI.closeModal('modal-edit-college')">Cancel</button><button type="submit" id="btn-edit-college-submit" class="btn btn-primary">Save Changes</button></div></form>
+</div></div>
+
+<div id="modal-create-college" class="modal"><div class="modal-box">
+  <div class="modal-header"><div><div class="modal-title">Create New College</div><div class="modal-subtitle">Principal &amp; departments can be added after.</div></div>
+  <button class="modal-close" onclick="UI.closeModal('modal-create-college')"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg></button></div>
+  <form id="form-create-college"><div class="modal-body" style="max-height:70vh;overflow-y:auto;padding-right:4px">
+    <div class="form-section">College Info</div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Name *</label><input class="form-input" id="cc-name" required placeholder="Sardar Patel College of Engineering"/></div>
+    <div class="form-group"><label class="form-label">Code *</label><input class="form-input" id="cc-code" required placeholder="SPCE" maxlength="10" style="text-transform:uppercase"/></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Email</label><input class="form-input" id="cc-email" type="email" placeholder="info@college.ac.in"/></div>
+    <div class="form-group"><label class="form-label">Phone</label><input class="form-input" id="cc-phone" placeholder="+91 XXXXX XXXXX"/></div></div>
+    <div class="form-group"><label class="form-label">Website</label><input class="form-input" id="cc-website" placeholder="www.college.ac.in"/></div>
+    <div class="form-section">Address</div>
+    <div class="form-group"><label class="form-label">Street</label><input class="form-input" id="cc-street" placeholder="Street address"/></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">City</label><input class="form-input" id="cc-city" placeholder="Ahmedabad"/></div>
+    <div class="form-group"><label class="form-label">State</label><input class="form-input" id="cc-state" placeholder="Gujarat"/></div></div>
+    <div class="form-group"><label class="form-label">Pincode</label><input class="form-input" id="cc-pincode" placeholder="380015" maxlength="10"/></div>
+    <div class="form-section">Security</div>
+    <div class="form-group"><label class="form-label">Deletion Password * <span style="color:var(--text-muted);font-size:10px">(required to deactivate later)</span></label><input class="form-input" id="cc-del-pw" type="password" required minlength="8" placeholder="Min. 8 characters"/></div>
+  </div><div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="UI.closeModal('modal-create-college')">Cancel</button><button type="submit" id="btn-create-college-submit" class="btn btn-primary">Create College</button></div></form>
+</div></div>
+
+<div id="modal-create-dept" class="modal"><div class="modal-box modal-box--sm">
+  <div class="modal-header"><div class="modal-title">Add Department</div><button class="modal-close" onclick="UI.closeModal('modal-create-dept')"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg></button></div>
+  <form id="form-create-dept"><input type="hidden" id="dept-college-id"/>
+  <div class="modal-body">
+    <div class="form-group"><label class="form-label">Department Name *</label><input class="form-input" id="dept-name" required placeholder="Computer Science &amp; Engineering"/></div>
+    <div class="form-group"><label class="form-label">Short Code *</label><input class="form-input" id="dept-code" required placeholder="CSE" maxlength="8" style="text-transform:uppercase"/><div class="form-hint">Unique within this college.</div></div>
+  </div><div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="UI.closeModal('modal-create-dept')">Cancel</button><button type="submit" id="btn-create-dept-submit" class="btn btn-primary">Add Department</button></div></form>
+</div></div>
+
+<div id="modal-appoint-principal" class="modal"><div class="modal-box modal-box--sm">
+  <div class="modal-header"><div><div class="modal-title">Add Principal</div><div class="modal-subtitle">A welcome email with OTP will be sent.</div></div><button class="modal-close" onclick="UI.closeModal('modal-appoint-principal')"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg></button></div>
+  <form id="form-appoint-principal"><input type="hidden" id="ap-college-id"/>
+  <div class="modal-body">
+    <div class="form-group"><label class="form-label">Full Name *</label><input class="form-input" id="ap-name" required placeholder="Dr. Full Name"/></div>
+    <div class="form-group"><label class="form-label">Email *</label><input class="form-input" id="ap-email" type="email" required placeholder="principal@college.ac.in"/></div>
+    <div class="form-group"><label class="form-label">Mobile</label><input class="form-input" id="ap-phone" placeholder="+91 XXXXX XXXXX"/></div>
+  </div><div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="UI.closeModal('modal-appoint-principal')">Cancel</button><button type="submit" id="btn-appoint-principal-submit" class="btn btn-primary">Add Principal</button></div></form>
+</div></div>
+
+<div id="modal-appoint-hod" class="modal"><div class="modal-box modal-box--sm">
+  <div class="modal-header"><div><div class="modal-title">Appoint HOD</div><div class="modal-subtitle">Dept: <strong id="hod-dept-label">—</strong></div></div><button class="modal-close" onclick="UI.closeModal('modal-appoint-hod')"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg></button></div>
+  <form id="form-appoint-hod"><input type="hidden" id="hod-dept-id"/><input type="hidden" id="hod-college-id"/>
+  <div class="modal-body">
+    <div class="form-group"><label class="form-label">Role</label>
+      <select class="form-input" id="hod-role-select"><option value="hod">HOD (Head of Department)</option><option value="co_hod">Co-HOD</option></select></div>
+    <div class="form-group"><label class="form-label">Full Name *</label><input class="form-input" id="hod-name" required placeholder="Dr. Full Name"/></div>
+    <div class="form-group"><label class="form-label">Email *</label><input class="form-input" id="hod-email" type="email" required placeholder="hod@college.ac.in"/></div>
+    <div class="form-group"><label class="form-label">Mobile</label><input class="form-input" id="hod-phone" placeholder="+91 XXXXX XXXXX"/></div>
+  </div><div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="UI.closeModal('modal-appoint-hod')">Cancel</button><button type="submit" id="btn-appoint-hod-submit" class="btn btn-primary">Appoint HOD</button></div></form>
+</div></div>
+
+<div id="modal-add-teacher" class="modal"><div class="modal-box modal-box--sm">
+  <div class="modal-header"><div class="modal-title">Add Teacher</div><button class="modal-close" onclick="UI.closeModal('modal-add-teacher')"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg></button></div>
+  <form id="form-add-teacher"><input type="hidden" id="teacher-college-id"/>
+  <div class="modal-body">
+    <div class="form-group"><label class="form-label">Department *</label><select class="form-input" id="teacher-dept-select" required><option value="">-- Select --</option></select></div>
+    <div class="form-group"><label class="form-label">Full Name *</label><input class="form-input" id="teacher-name" required placeholder="Prof. Full Name"/></div>
+    <div class="form-group"><label class="form-label">Email *</label><input class="form-input" id="teacher-email" type="email" required placeholder="teacher@college.ac.in"/></div>
+    <div class="form-group"><label class="form-label">Mobile</label><input class="form-input" id="teacher-phone" placeholder="+91 XXXXX XXXXX"/></div>
+  </div><div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="UI.closeModal('modal-add-teacher')">Cancel</button><button type="submit" id="btn-add-teacher-submit" class="btn btn-primary">Add Teacher</button></div></form>
+</div></div>
+
+<div id="modal-edit-staff" class="modal"><div class="modal-box modal-box--sm">
+  <div class="modal-header"><div class="modal-title" id="edit-staff-modal-title">Edit Staff</div><button class="modal-close" onclick="UI.closeModal('modal-edit-staff')"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg></button></div>
+  <form id="form-edit-staff"><input type="hidden" id="edit-staff-id"/>
+  <div class="modal-body">
+    <div class="form-group"><label class="form-label">Full Name *</label><input class="form-input" id="edit-staff-name" required/></div>
+    <div class="form-group"><label class="form-label">Email *</label><input class="form-input" id="edit-staff-email" type="email" required/></div>
+    <div class="form-group"><label class="form-label">Mobile</label><input class="form-input" id="edit-staff-phone"/></div>
+  </div><div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="UI.closeModal('modal-edit-staff')">Cancel</button><button type="submit" id="btn-edit-staff-submit" class="btn btn-primary">Save Changes</button></div></form>
+</div></div>
+
+<div id="modal-student" class="modal"><div class="modal-box modal-box--lg">
+  <div class="modal-header"><div class="modal-title" id="student-modal-title">Add Student</div><button class="modal-close" onclick="UI.closeModal('modal-student')"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg></button></div>
+  <form id="form-student">
+    <input type="hidden" id="student-mode" value="add"/><input type="hidden" id="student-id"/>
+    <input type="hidden" id="student-dept-id"/><input type="hidden" id="student-college-id"/>
+    <div class="modal-body">
+      <div class="form-section">Personal Information</div>
+      <div class="form-row"><div class="form-group"><label class="form-label">Full Name *</label><input class="form-input" id="stu-name" required placeholder="Student Name"/></div>
+      <div class="form-group"><label class="form-label">Roll Number</label><input class="form-input" id="stu-roll" placeholder="CSE2024001"/></div></div>
+      <div class="form-row"><div class="form-group"><label class="form-label">Email *</label><input class="form-input" id="stu-email" type="email" required placeholder="student@college.ac.in"/></div>
+      <div class="form-group"><label class="form-label">Mobile</label><input class="form-input" id="stu-phone" placeholder="+91 XXXXX XXXXX"/></div></div>
+      <div class="form-row"><div class="form-group"><label class="form-label">Date of Birth</label><input class="form-input" id="stu-dob" type="date"/></div>
+      <div class="form-group"><label class="form-label">Gender *</label><select class="form-input" id="stu-gender" required><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div></div>
+      <div class="form-row"><div class="form-group"><label class="form-label">Course</label><select class="form-input" id="stu-course"><option value="">— Select Course —</option></select></div>
+      <div class="form-group"><label class="form-label">Semester</label><select class="form-input" id="stu-sem"><option value="1">Semester 1</option><option value="2">Semester 2</option><option value="3">Semester 3</option><option value="4">Semester 4</option><option value="5">Semester 5</option><option value="6">Semester 6</option></select></div></div>
+      <div class="form-section">Address</div>
+      <div class="form-group"><label class="form-label">Street</label><input class="form-input" id="stu-street" placeholder="Street address"/></div>
+      <div class="form-row"><div class="form-group"><label class="form-label">City</label><input class="form-input" id="stu-city" placeholder="Ahmedabad"/></div>
+      <div class="form-group"><label class="form-label">State</label><input class="form-input" id="stu-state" placeholder="Gujarat"/></div></div>
+      <div class="form-group"><label class="form-label">Pincode</label><input class="form-input" id="stu-pincode" placeholder="380015" maxlength="10"/></div>
+      <div id="student-active-wrap" class="hidden" style="margin-top:14px">
+        <div class="form-check"><input type="checkbox" id="stu-active" checked/><label for="stu-active">Student is Active</label></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="UI.closeModal('modal-student')">Cancel</button><button type="submit" id="btn-student-submit" class="btn btn-primary">Save Student</button></div>
+  </form>
+</div></div>
+
+<div id="modal-confirm" class="modal"><div class="modal-box modal-box--sm">
+  <div class="modal-body confirm-body">
+    <div class="confirm-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg></div>
+    <h3 class="confirm-title" id="confirm-title">Are you sure?</h3>
+    <p class="confirm-message" id="confirm-message"></p>
+    <div id="confirm-type-name-wrap" style="display:none;text-align:left;margin-top:10px">
+      <label style="font-size:12px;font-weight:600" id="confirm-type-name-label">Type the name to confirm:</label>
+      <input type="text" id="confirm-type-name-input" class="form-input" style="margin-top:4px" autocomplete="off">
+    </div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="UI.closeModal('modal-confirm')">Cancel</button><button class="btn btn-danger" id="confirm-ok-btn">Confirm</button></div>
+</div></div>
+
+<!-- Scripts — order matters -->
+<script src="/shared/auth.js"></script>
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/colleges.js"></script>
+<script src="js/departments.js"></script>
+<script src="js/staff.js"></script>
+<script src="js/college-detail.js"></script>
+<script src="js/dept-detail.js"></script>
+<script src="js/analytics.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

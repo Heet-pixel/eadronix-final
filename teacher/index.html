@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teacher Panel — eadronix</title>
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+<!-- Styles -->
+<link rel="stylesheet" href="css/style.css">
+
+<!-- Auth Guard — runs immediately before DOM, single role: teacher -->
+<script src="js/auth.js"></script>
+</head>
+</head>
+<body>
+
+<!-- Sidebar Overlay (mobile) -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<!-- ━━━━━━━━━ SIDEBAR ━━━━━━━━━ -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon"><img src="logo.png"></div>
+    <div class="logo-text">Eadronix<span>Portal</span></div>
+  </div>
+  <div class="sidebar-teacher" onclick="goToPage('profile')" style="cursor:pointer" title="View my profile">
+    <div class="t-av-lg" id="sidebarAv"></div>
+    <div>
+      <div class="t-name" id="sidebarName"></div>
+      <div class="t-dept" id="sidebarDept"></div>
+    </div>
+     
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Main</div>
+    <button class="sn-item active" id="sni-home" onclick="goToPage('home'); closeSidebar()">
+      <span class="sn-icon">🏠</span> Home
+    </button>
+    <button class="sn-item" id="sni-students" onclick="goToStudents(); closeSidebar()">
+      <span class="sn-icon">🎓</span> Students
+    </button>
+    <button class="sn-item" id="sni-attendance" onclick="goToPage('attendance'); closeSidebar()">
+      <span class="sn-icon">✅</span> Mark Attendance
+    </button>
+    <div class="nav-section-label" style="margin-top:8px">Resources</div>
+    <button class="sn-item" id="sni-syllabus" onclick="goToPage('syllabus'); closeSidebar()">
+      <span class="sn-icon">📚</span> Upload Syllabus
+    </button>
+    <button class="sn-item" id="sni-schedule" onclick="goToPage('schedule'); closeSidebar()">
+      <span class="sn-icon">📅</span> Timetable
+    </button>
+    <button class="sn-item" id="sni-announcements" onclick="goToPage('announcements'); closeSidebar()">
+      <span class="sn-icon">📣</span> Announcements
+    </button>
+  </nav>
+  <div class="sidebar-footer">
+    <button class="sn-item" id="sni-logout" onclick="window.salLogout()">
+      <span class="sn-icon">🚪</span> Logout
+    </button>
+    <button class="theme-switch" onclick="toggleTheme()" id="themeBtnSidebar">🌙 Dark Mode</button>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━ MAIN CONTENT ━━━━━━━━━ -->
+<div class="main-content">
+
+  <!-- Top Header -->
+  <div class="top-header">
+    <button class="th-hamburger" onclick="toggleSidebar()">☰</button>
+    <div class="th-brand">Eadronix <span></span></div>
+    <div class="th-spacer"></div>
+    <div class="th-right">
+      <div class="th-teacher-btn">
+        <div class="th-av" id="headerAv"></div>
+        <span id="headerName"></span>
+      </div>
+      <button class="th-theme-btn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+    </div>
+  </div>
+
+  <!-- Content Area -->
+  <div class="content-area">
+
+    <!-- ━━━━━━━━━ PAGE: HOME ━━━━━━━━━ -->
+    <div class="page active" id="page-home">
+      <!-- Hero -->
+      <div class="hero-banner">
+        <div class="hero-top">
+          <div>
+            <div class="hero-greeting" id="heroGreeting">Hello, Rajesh 👋</div>
+            <div class="hero-sub" id="heroDept">Computer Application Dept. • Eadronix</div>
+          </div>
+          <div class="hero-date" id="heroDate"></div>
+        </div>
+        <div class="hero-stats">
+          <div class="hero-stat" onclick="goToStudents()">
+            <div class="hs-icon">👨‍🏫</div>
+            <div class="hs-val" id="statStudents">78</div>
+            <div class="hs-lbl">Total Students</div>
+          </div>
+          <div class="hero-stat" onclick="goToPage('syllabus')">
+            <div class="hs-icon">📄</div>
+            <div class="hs-val" id="statSubjects">8</div>
+            <div class="hs-lbl">Subjects</div>
+          </div>
+          <div class="hero-stat" onclick="goToPage('attendance')">
+            <div class="hs-icon">✅</div>
+            <div class="hs-val" id="statAtt">0</div>
+            <div class="hs-lbl">Att. Uploaded</div>
+          </div>
+          <div class="hero-stat" onclick="goToPage('syllabus')">
+            <div class="hs-icon">📚</div>
+            <div class="hs-val" id="statSyl">0</div>
+            <div class="hs-lbl">Syl. Topics</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="section">
+        <div class="sec-header">
+          <div class="sec-title">Quick Actions</div>
+        </div>
+        <div class="quick-grid">
+          <div class="qa-card primary" onclick="goToPage('attendance')">
+            <div class="qa-icon-wrap">📋</div>
+            <div>
+              <div class="qa-card-title">Mark Attendance</div>
+              <div class="qa-card-sub">Upload today's attendance</div>
+            </div>
+            <div class="qa-arrow"></div>
+          </div>
+          <div class="qa-card" onclick="goToPage('syllabus')">
+            <div class="qa-icon-wrap purple">📚</div>
+            <div>
+              <div class="qa-card-title">Upload Syllabus</div>
+              <div class="qa-card-sub" style="color:var(--muted)">Log what you taught</div>
+            </div>
+            <div class="qa-arrow"></div>
+          </div>
+          <div class="qa-card" onclick="goToStudents()">
+            <div class="qa-icon-wrap green">🎓</div>
+            <div>
+              <div class="qa-card-title">View Students</div>
+              <div class="qa-card-sub" style="color:var(--muted)">Browse all your students</div>
+            </div>
+            <div class="qa-arrow"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Today's Schedule -->
+      <div class="section">
+        <div class="sec-header">
+          <div class="sec-title">Today's Schedule</div>
+          <div class="sec-action" onclick="goToPage('schedule')">Full Timetable →</div>
+        </div>
+        <div class="schedule-list" id="todaySchedule"></div>
+      </div>
+    </div>
+
+    <!-- ━━━━━━━━━ PAGE: STUDENTS ━━━━━━━━━ -->
+    <div class="page" id="page-students">
+      <div class="page-header">
+        <div class="page-title">Students</div>
+        <div class="page-subtitle">Select a class to view students and their attendance</div>
+      </div>
+
+      <!-- Class Selector -->
+      <div class="class-filter-bar">
+        <div class="cf-group">
+          <div class="cf-label">Course</div>
+          <select class="cf-select" id="stuCourse" onchange="onStuClassChange()">
+            <option value="">— Select Course —</option>
+            <option>BCA</option><option>MCA</option>
+          </select>
+        </div>
+        <div class="cf-group">
+          <div class="cf-label">Semester</div>
+          <select class="cf-select" id="stuSem" onchange="onStuClassChange()">
+            <option value="">— Select Semester —</option>
+            <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option>
+          </select>
+        </div>
+        <button class="cf-btn" onclick="onStuClassChange()">🔍 Load Students</button>
+      </div>
+
+      <div id="stuPageContent">
+        <div class="students-placeholder">
+          <div class="empty-state">
+            <div class="e-icon">🎓</div>
+            <div class="e-txt">Select Course & Semester</div>
+            <div class="e-sub">Choose a class above to see all students and their attendance</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ━━━━━━━━━ PAGE: ATTENDANCE ━━━━━━━━━ -->
+    <div class="page" id="page-attendance">
+      <div class="page-header">
+        <div class="page-title">Mark Attendance</div>
+        <div class="page-subtitle">Select class → select subject → mark students</div>
+        <button class="btn btn-ghost" style="margin-left:auto" onclick="AttHistory.open()">🕘 Attendance History</button>
+      </div>
+
+      <!-- Attendance History modal (spec item 4): list every lecture this teacher
+           has submitted; click one to view/edit it without creating a new lecture. -->
+      <div class="modal-overlay" id="attHistoryOverlay" onclick="if(event.target===this)AttHistory.close()">
+        <div class="modal-card" style="max-width:640px;max-height:82vh;display:flex;flex-direction:column">
+          <div class="modal-header"><span>🕘 Attendance History</span><button onclick="AttHistory.close()">✕</button></div>
+          <div class="modal-body" id="attHistoryBody" style="overflow-y:auto;padding:16px">Loading…</div>
+        </div>
+      </div>
+      <div class="modal-overlay" id="attSessionOverlay" onclick="if(event.target===this)AttHistory.closeSession()">
+        <div class="modal-card" style="max-width:560px;max-height:82vh;display:flex;flex-direction:column">
+          <div class="modal-header"><span id="attSessionTitle">Lecture Details</span><button onclick="AttHistory.closeSession()">✕</button></div>
+          <div class="modal-body" id="attSessionBody" style="overflow-y:auto;padding:16px">Loading…</div>
+        </div>
+      </div>
+
+      <!-- Stepper -->
+      <div class="att-stepper" id="attStepper">
+        <div class="step-item active" id="step1">
+          <div class="step-num">1</div><span>Select Class</span>
+        </div>
+        <div class="step-sep"></div>
+        <div class="step-item" id="step2">
+          <div class="step-num">2</div><span>Select Subject</span>
+        </div>
+        <div class="step-sep"></div>
+        <div class="step-item" id="step3">
+          <div class="step-num">3</div><span>Mark Students</span>
+        </div>
+        <div class="step-sep"></div>
+        <div class="step-item" id="step4">
+          <div class="step-num">4</div><span>Confirm</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd">🎓 Step 1 — Select Class</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Course</label>
+            <select id="attCourse" onchange="onAttChange()">
+              <option value="">— Course —</option><option>BCA</option><option>MCA</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Semester</label>
+            <select id="attSem" onchange="onAttChange()">
+              <option value="">— Sem —</option>
+              <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Date</label><input type="date" id="attDate" max=""></div>
+          <div class="form-group"><label>Type</label>
+            <select id="attType"><option>Theory</option><option>Practical</option><option>Tutorial</option><option>Seminar</option></select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Start Time</label><input type="time" id="attStart" oninput="autoSetEndTime()"></div>
+          <div class="form-group"><label>End Time</label><input type="time" id="attEnd"></div>
+          <div class="form-group"><label>Division (optional)</label><input type="text" id="attDivision" placeholder="e.g. A"></div>
+        </div>
+        <div class="form-group">
+          <label>Topic taught today (optional)</label>
+          <input type="text" id="attTopic" placeholder="e.g. Joins, normalization, recursion practice">
+        </div>
+      </div>
+
+      <div id="attSubjSec" style="display:none">
+        <div class="card">
+          <div class="card-hd">📄 Step 2 — Select Subject <span class="card-hd-sub">Only your assigned subjects</span></div>
+          <label class="proxy-toggle">
+            <input type="checkbox" id="attProxy" onchange="selectedSub='';renderSubjChips(currentAttCourse,currentAttSem)">
+            <span>Proxy lecture</span>
+          </label>
+          <div class="subj-chip-wrap" id="attSubjChips"></div>
+        </div>
+      </div>
+
+      <div id="attGridSec" style="display:none">
+        <div class="card">
+          <div class="card-hd">👨‍🏫 Step 3 — Mark Attendance <span class="card-hd-sub">Tap to toggle present/absent</span></div>
+          <div class="att-meta-bar">
+            <div class="att-ctr"><div class="ac-val" id="acTotal" style="color:var(--accent)">0</div><div class="ac-lbl">Total</div></div>
+            <div class="att-ctr"><div class="ac-val" id="acPresent" style="color:var(--green)">0</div><div class="ac-lbl">Present</div></div>
+            <div class="att-ctr"><div class="ac-val" id="acAbsent" style="color:var(--red)">0</div><div class="ac-lbl">Absent</div></div>
+            <div class="att-ctr"><div class="ac-val" id="acPct" style="color:var(--accent)">—</div><div class="ac-lbl">% Pres.</div></div>
+            <div class="att-actions-bar">
+              <button class="btn btn-success btn-sm" onclick="markAll('present')">✅ All Present</button>
+              <button class="btn btn-ghost btn-sm" onclick="markAll('absent')">❌ All Absent</button>
+            </div>
+          </div>
+          <div class="att-grid" id="attGrid"></div>
+          <div class="btn-row">
+            <button class="btn btn-accent" onclick="prepareConfirm()">📚 Review & Submit</button>
+            <button class="btn btn-ghost" onclick="markAll('present')" style="max-width:200px">♻️ Reset All Present</button>
+          </div>
+          <div class="conf-panel" id="attConfirm">
+            <div style="font-size:15px;font-weight:800;color:var(--accent);margin-bottom:6px">✅ Confirm Attendance</div>
+            <div class="conf-nums" id="confNums"></div>
+            <div class="btn-row">
+              <button class="btn btn-success" onclick="submitAtt()">✅ Confirm & Save</button>
+              <button class="btn btn-ghost" onclick="document.getElementById('attConfirm').style.display='none'" style="max-width:160px">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="attPlaceholder" style="text-align:center;padding:52px 20px">
+        <div style="font-size:52px;margin-bottom:14px">📋</div>
+        <div style="font-size:15px;font-weight:700;color:var(--muted)">Select course &amp; semester above</div>
+        <div style="font-size:12px;color:var(--muted2);margin-top:6px;font-weight:600">to load subjects and mark attendance</div>
+      </div>
+    </div>
+
+    <!-- ━━━━━━━━━ PAGE: SYLLABUS ━━━━━━━━━ -->
+    <div class="page" id="page-syllabus">
+      <div class="page-header">
+        <div class="page-title">Upload Syllabus</div>
+        <div class="page-subtitle">Log topics and materials you taught</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px" class="syl-layout">
+        <div>
+          <div class="card">
+            <div class="card-hd">📄 New Syllabus Entry</div>
+            <div class="form-row">
+              <div class="form-group"><label>Course</label>
+                <select id="sylCourse" onchange="updateSemOptions('sylCourse','sylSem',false); populateSylSubjects()">
+                  <option value="">— Course —</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Semester</label>
+                <select id="sylSem" onchange="populateSylSubjects()">
+                  <option value="">— Sem —</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group"><label>Subject</label>
+              <select id="sylSubject"><option value="">— Select Subject —</option></select>
+            </div>
+            <div class="form-group"><label>Topic / Chapter Covered</label>
+              <input type="text" id="sylTopic" placeholder="e.g. Chapter 3: Linked Lists">
+            </div>
+            <div class="form-group"><label>Description / Notes</label>
+              <textarea id="sylDesc" placeholder="Brief description of what was covered..."></textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Date</label><input type="date" id="sylDate"></div>
+              <div class="form-group"><label>Duration (min)</label><input type="number" id="sylDuration" value="60" min="10" max="300"></div>
+            </div>
+            <div class="form-group"><label>Teaching Method</label>
+              <select id="sylMethod">
+                <option>Lecture (Blackboard/Whiteboard)</option>
+                <option>PowerPoint Presentation</option>
+                <option>Live Coding / Demo</option>
+                <option>Video + Discussion</option>
+                <option>Practical / Lab</option>
+                <option>Group Activity</option>
+                <option>Assignment Review</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Attach Material (Optional)</label>
+              <label class="upload-zone" for="sylFile">
+                <input type="file" id="sylFile" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.png" onchange="showSylFile(this)">
+                <div class="uz-icon">📎</div>
+                <p>Click or drag to attach notes / slides</p>
+                <small style="color:var(--muted2);font-size:11px">PDF, Word, PPT, Images</small>
+              </label>
+              <div id="sylFilePrev" style="margin-top:8px"></div>
+            </div>
+            <button class="btn btn-success" onclick="uploadSyllabus()">📄 Save Syllabus Entry</button>
+          </div>
+        </div>
+        <div>
+          <div class="card" style="margin-top:20px">
+            <div class="card-hd">📋 Uploaded Entries <span class="card-hd-sub" id="sylCount">0 entries</span></div>
+            <div id="sylList">
+              <div class="empty-state"><div class="e-icon">📄</div><div class="e-txt">No entries yet</div><div class="e-sub">Save your first topic above</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ━━━━━━━━━ PAGE: TIMETABLE ━━━━━━━━━ -->
+    <div class="page" id="page-schedule">
+      <div class="page-header">
+        <div class="page-title">Timetable</div>
+        <div class="page-subtitle">Your weekly class schedule</div>
+      </div>
+      <div class="filter-tabs" id="dayTabs"></div>
+      <div id="scheduleCont"></div>
+    </div>
+
+ <!-- ━━━━━━━━━ PAGE: ANNOUNCEMENTS ━━━━━━━━━ -->
+<div class="page" id="page-announcements">
+
+    <div class="page-header">
+        <div class="page-title">Announcements</div>
+        <div class="page-subtitle">
+            Updates from HOD, Co-HOD & Admin
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-hd">📣 Announcements from HOD / Co-HOD / Admin</div>
+
+        <div id="announcementsList">
+            <div class="empty-state">
+                <div class="e-icon">📣</div>
+                <div class="e-txt">No announcements yet</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+
+
+    <!-- ━━━━━━━━━ PAGE: MY PROFILE (spec item 7) ━━━━━━━━━ -->
+    <div class="page" id="page-profile">
+      <div class="page-header">
+        <div class="page-title">My Profile</div>
+        <div class="page-subtitle">Update your photo and contact details</div>
+      </div>
+      <div class="card" style="max-width:560px;margin:0 auto">
+        <div style="text-align:center;padding:20px 0 8px">
+          <div style="position:relative;display:inline-block">
+            <div class="t-av-lg" id="profAv" style="width:96px;height:96px;font-size:32px;margin:0 auto">RK</div>
+            <label for="profPhotoInput" title="Change photo"
+              style="position:absolute;bottom:0;right:0;background:var(--accent,#3b82f6);color:#fff;border-radius:50%;
+                     width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px">✎</label>
+            <input type="file" id="profPhotoInput" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="TeacherProfile.onPhotoSelected(event)">
+          </div>
+          <div id="profPhotoStatus" style="font-size:12px;color:var(--muted,#888);margin-top:6px"></div>
+        </div>
+        <div class="card-hd">Contact Details</div>
+        <div class="form-group"><label>Name</label><input id="profName" disabled></div>
+        <div class="form-group"><label>Email</label><input id="profEmail" disabled></div>
+        <div class="form-group"><label>Designation</label><input id="profDesignation" disabled></div>
+        <div class="form-group"><label>Phone</label><input id="profPhone" disabled></div>
+        <div class="form-group"><label>Emergency Contact</label><input id="profEmergency" disabled></div>
+        <div class="form-group"><label>Qualification</label><input id="profQualification" disabled></div>
+        <div class="form-group"><label>Experience</label><input id="profExperience" disabled></div>
+        <p style="font-size:12px;color:var(--muted,#888);margin:6px 0 14px">
+          Your profile details are view-only here. Only your photo can be updated on this page —
+          ask your HOD/Admin to change any of the details above.
+        </p>
+      </div>
+    </div>
+
+  </div><!-- /content-area -->
+</div><!-- /main-content -->
+
+<!-- ━━━━━━━━━ BOTTOM NAV (Mobile) ━━━━━━━━━ -->
+<nav class="bottom-nav">
+  <button class="bn-item active" onclick="goToPage('home')" id="bn-home">
+    <div class="bn-icon">🏠 </div><div class="bn-lbl">Home</div>
+  </button>
+  <button class="bn-item" onclick="goToStudents()" id="bn-students">
+    <div class="bn-icon">🎓</div><div class="bn-lbl">Students</div>
+  </button>
+  <button class="bn-item" onclick="goToPage('attendance')" id="bn-attendance">
+    <div class="bn-icon">✅</div><div class="bn-lbl">Attend.</div>
+  </button>
+  <button class="bn-item" onclick="goToPage('syllabus')" id="bn-syllabus">
+    <div class="bn-icon">📚</div><div class="bn-lbl">Syllabus</div>
+  </button>
+  <button class="bn-item" onclick="goToPage('schedule')" id="bn-schedule">
+    <div class="bn-icon">📅</div><div class="bn-lbl">Schedule</div>
+  </button>
+</nav>
+
+<!-- ━━━━━━━━━ STUDENT DETAIL MODAL ━━━━━━━━━ -->
+<div class="modal-overlay" id="stuModal" onclick="if(event.target===this)closeStuModal()">
+  <div class="modal-sheet">
+    <div class="modal-drag" onclick="closeStuModal()"></div>
+    <div class="modal-hd" id="stuModalHd"></div>
+    <div class="modal-body" id="stuModalBody"></div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━ SUBJECT DETAIL MODAL ━━━━━━━━━ -->
+<div class="modal-overlay" id="subjDetailModal" onclick="if(event.target===this)closeSubjModal()">
+  <div class="modal-sheet">
+    <div class="modal-drag" onclick="closeSubjModal()"></div>
+    <div class="modal-hd" id="subjDetailHd"></div>
+    <div class="modal-body" id="subjDetailBody"></div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━ SWITCH TEACHER MODAL ━━━━━━━━━ -->
+    <!-- <div style="padding:4px 20px 16px;font-size:17px;font-weight:900;border-bottom:1px solid var(--border)">Switch Teacher</div>
+    <div class="modal-body"><div id="teacherList"></div></div>
+  </div>
+</div> -->
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+
+<!-- ═══ JavaScript — strict load order ═══ -->
+<!-- 0. Excel export/import library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- 1. UI utilities -->
+<script src="js/ui.js"></script>
+<!-- 2. Theme -->
+<script src="js/theme.js"></script>
+<!-- 3. Mock data & helpers (no TEACHERS array) -->
+<script src="js/data.js"></script>
+<!-- 4. API client -->
+<script src="js/api.js"></script>
+<script src="js/profile.js"></script>
+<!-- 5. Navigation -->
+<script src="js/navigation.js"></script>
+<!-- 6. App bootstrap — populates identity from /api/auth/me only -->
+<script src="js/app.js"></script>
+<!-- 7. Feature modules -->
+<script src="js/dashboard.js"></script>
+<script src="js/students.js"></script>
+<script src="js/attendance.js"></script>
+<script src="js/syllabus.js"></script>
+<script src="js/schedule.js"></script>
+<script src="js/notices.js"></script>
+
+</body>
+</html>

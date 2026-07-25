@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <link rel="icon" type="image/png" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
+  <title>Eadronix — Login</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="sidebar-logo"><img src="logo.png"></div>
+    <h1>Eadronix Portal</h1>
+    <p>Student Administration &amp; Learning</p>
+  </div>
+
+  <div id="alert" class="alert"></div>
+
+  <!-- ══ STEP 1: Email ══ -->
+  <div id="step-email" class="step active">
+    <div class="step-title">Welcome back</div>
+    <div class="step-sub">Enter your registered email to continue</div>
+    <div class="form-group">
+      <label for="email">Email Address</label>
+      <input type="email" id="email" placeholder="you@institution.ac.in" autocomplete="email"/>
+    </div>
+    <button class="btn" id="btn-email">
+      <span id="btn-email-label">Continue</span>
+    </button>
+  </div>
+
+  <!-- ══ STEP 2a: Password login ══ -->
+  <div id="step-password" class="step">
+    <div id="user-chip-pw" class="user-chip"></div>
+    <div class="step-title">Enter your password</div>
+    <div class="step-sub">Use the password you set during account activation</div>
+    <div class="form-group">
+      <label for="password">Password</label>
+      <div class="pw-wrap">
+        <input type="password" id="password" placeholder="Your password" autocomplete="current-password"/>
+        <button class="pw-toggle" type="button" onclick="togglePw('password')" title="Show/hide">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/></svg>
+        </button>
+      </div>
+    </div>
+    <button class="btn" id="btn-login"><span id="btn-login-label">Login</span></button>
+    <a class="link" id="forgot-link">Forgot password?</a>
+    <button class="btn btn-ghost" id="btn-diff-email-pw">← Use different email</button>
+  </div>
+
+  <!-- ══ STEP 2b: First login — activate account ══ -->
+  <div id="step-first" class="step">
+    <div id="user-chip-first" class="user-chip"></div>
+    <div class="step-title">Activate your account</div>
+    <div class="step-sub">This is your first login. We'll send an OTP to verify your email and let you set a password.</div>
+    <button class="btn" id="btn-send-otp"><span id="btn-send-otp-label">Send OTP to my email</span></button>
+    <button class="btn btn-ghost" id="btn-diff-email-first">← Use different email</button>
+  </div>
+
+  <!-- ══ STEP 3: Enter OTP ══ -->
+  <div id="step-otp" class="step">
+    <div class="step-title">Enter OTP</div>
+    <div class="step-sub" id="otp-desc">Enter the 6-digit OTP sent to your email.</div>
+    <div class="form-group">
+      <label>One-Time Password</label>
+      <input type="text" id="otp-input" placeholder="Enter 6-digit OTP" maxlength="6"
+        style="font-family:'DM Mono',monospace;font-size:24px;letter-spacing:8px;text-align:center"
+        autocomplete="one-time-code"/>
+    </div>
+    <button class="btn" id="btn-verify-otp"><span id="btn-verify-label">Verify OTP</span></button>
+    <div class="timer" id="otp-timer"></div>
+    <a class="link" id="resend-link" style="display:none">Resend OTP</a>
+    <button class="btn btn-ghost" id="btn-otp-back">← Go back</button>
+  </div>
+
+  <!-- ══ STEP 4: Set / Reset password ══ -->
+  <div id="step-setpw" class="step">
+    <div class="step-title" id="setpw-title">Set your password</div>
+    <div class="step-sub" id="setpw-sub">Choose a strong password (min. 8 characters)</div>
+    <div class="form-group">
+      <label>New Password</label>
+      <div class="pw-wrap">
+        <input type="password" id="new-password" placeholder="Min. 8 characters" autocomplete="new-password"/>
+        <button class="pw-toggle" type="button" onclick="togglePw('new-password')">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Confirm Password</label>
+      <div class="pw-wrap">
+        <input type="password" id="confirm-password" placeholder="Repeat password" autocomplete="new-password"/>
+        <button class="pw-toggle" type="button" onclick="togglePw('confirm-password')">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/></svg>
+        </button>
+      </div>
+    </div>
+    <!-- Password strength bar -->
+    <div class="pw-strength" id="pw-strength" style="display:none">
+      <div class="pw-strength-bar"><div id="pw-strength-fill"></div></div>
+      <div class="pw-strength-label" id="pw-strength-label"></div>
+    </div>
+    <button class="btn" id="btn-setpw"><span id="btn-setpw-label">Set Password &amp; Login</span></button>
+  </div>
+
+  <!-- ══ STEP 5: Forgot password — confirm email ══ -->
+  <div id="step-forgot" class="step">
+    <div class="step-title">Reset your password</div>
+    <div class="step-sub">We'll send an OTP to the email below to verify it's you.</div>
+    <div class="forgot-email-box">
+      <div class="forgot-email-icon">✉️</div>
+      <div id="forgot-email-display" class="forgot-email-text"></div>
+      <div class="forgot-email-note">This email cannot be changed here</div>
+    </div>
+    <button class="btn" id="btn-forgot-send"><span id="btn-forgot-send-label">Send OTP to this email</span></button>
+    <button class="btn btn-ghost" id="btn-forgot-back">← Go back to login</button>
+  </div>
+
+</div>
+
+<script src="auth-state.js"></script>
+<script src="auth-ui.js"></script>
+<script src="auth-api.js"></script>
+<script src="auth-flow.js"></script>
+</body>
+</html>

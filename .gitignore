@@ -1,0 +1,15 @@
+# Environment variables
+.env
+.env.local
+.env.development
+.env.production
+
+# Dependencies
+node_modules/
+
+# Logs
+logs/
+*.log
+
+# VS Code temp files
+tempCodeRunnerFile.js

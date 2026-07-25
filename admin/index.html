@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Principal Dashboard – Eadronix College Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css"/>
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
+<style>
+  body { font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; }
+  #page-loader { position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;transition:opacity .4s;pointer-events:none;opacity:0 }
+</style>
+</head>
+<body>
+
+<div id="page-loader"><div class="sk" style="width:60px;height:60px;border-radius:50%"></div></div>
+
+<div id="ov" onclick="UI.closeSb()"></div>
+<div id="toasts"></div>
+
+<!-- ═══ SIDEBAR ═══ -->
+<aside id="sb">
+  <div class="sb-top">
+    <div class="sb-logo"><img src="logo.png"></div>
+    <div>
+      <div class="sb-brand" id="sb-college">SAL College</div>
+      <div class="sb-sub">Principal Portal</div>
+    </div>
+    <button class="sb-cl" onclick="UI.closeSb()">✕</button>
+  </div>
+  <div class="sb-nav">
+    <div class="nav-sec">Overview</div>
+    <button class="nav-btn active" data-s="dashboard" onclick="navTo('dashboard')">
+      <span class="ni">📊</span> Dashboard
+    </button>
+    <div class="nav-sec">Management</div>
+    <button class="nav-btn" data-s="departments" onclick="navTo('departments')">
+      <span class="ni">🏛️</span> Departments
+    </button>
+    <button class="nav-btn" data-s="courses" onclick="navTo('courses')">
+      <span class="ni">📚</span> Courses
+    </button>
+    <button class="nav-btn" data-s="subjects" onclick="navTo('subjects')">
+      <span class="ni">🔬</span> Subjects
+    </button>
+    <div class="nav-sec">People</div>
+    <button class="nav-btn" data-s="hod" onclick="navTo('hod')">
+      <span class="ni">🧑‍💼</span> HOD / Co-HOD
+    </button>
+    <button class="nav-btn" data-s="teachers" onclick="navTo('teachers')">
+      <span class="ni">👩‍🏫</span> Teachers
+    </button>
+    <button class="nav-btn" data-s="students" onclick="navTo('students')">
+      <span class="ni">👨‍🎓</span> Students
+    </button>
+    <div class="nav-sec">Communication</div>
+    <button class="nav-btn" data-s="notices" onclick="navTo('notices')">
+      <span class="ni">📢</span> Notices
+    </button>
+    <div class="nav-sec"></div>
+    <!-- <button class="nav-btn" data-s="settings" onclick="navTo('settings')">
+      <span class="ni">⚙️</span> Settings
+    </button> -->
+  </div>
+  <div class="sb-foot">
+    <div class="sb-usr">
+      <div class="sb-av" id="sb-av">P</div>
+      <div>
+        <div id="sb-name">Principal</div>
+        <div id="sb-email" style="font-size:11px;color:rgba(255,255,255,.4)"></div>
+      </div>
+    </div>
+    <button class="btn-lo" data-action="logout">🚪 Logout</button>
+  </div>
+</aside>
+
+<!-- ═══ MAIN ═══ -->
+<div id="main">
+  <header id="topbar">
+    <button class="ham" onclick="UI.toggleSb()">☰</button>
+    <div style="flex:1">
+      <div id="pg-title" style="font-size:16px;font-weight:600">Dashboard</div>
+      <div id="pg-subtitle" style="font-size:12px;color:var(--text3)">Welcome back, Principal</div>
+    </div>
+    <button id="dark-toggle" class="dark-toggle" onclick="UI.toggleDarkMode()" title="Toggle dark mode">🌙</button>
+  </header>
+
+  <div id="content">
+
+    <!-- ══════════ DASHBOARD ══════════ -->
+    <div class="pg" id="pg-dashboard">
+      <div style="background:linear-gradient(135deg,var(--blue),var(--accent));border-radius:14px;padding:22px 24px;color:#fff;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+        <div>
+          <div id="welcome-greeting" style="font-size:20px;font-weight:700;margin-bottom:4px">Good Morning 👋</div>
+          <div id="welcome-date" style="font-size:13px;opacity:.85"></div>
+        </div>
+      </div>
+      <div id="stat-grid"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;flex-wrap:wrap">
+        <div class="card">
+          <div class="card-head"><div class="card-title">Recent Activity</div></div>
+          <div class="card-body" id="dash-recent"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">Department Health</div></div>
+          <div class="card-body" id="dash-dept-health"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ DEPARTMENTS ══════════ -->
+    <div class="pg hidden" id="pg-departments">
+      <!-- Box view -->
+      <div id="dept-box-view">
+        <div class="pg-header">
+          <div class="ph-left"><h2>Departments</h2><p>Manage all college departments</p></div>
+          <button class="btn btn-p" onclick="Departments.openCreate()">＋ New Department</button>
+        </div>
+        <div class="dept-box-grid" id="dept-boxes"></div>
+      </div>
+      <!-- Dept detail + courses -->
+      <div id="dept-detail-view" class="hidden">
+        <div class="back-bar">
+          <button class="back-btn" onclick="Departments.backToList()">← All Departments</button>
+        </div>
+        <div class="dept-detail-header">
+          <div class="dept-detail-icon" id="dept-detail-icon">🏛️</div>
+          <div>
+            <div class="dept-detail-name" id="dept-detail-name">Department</div>
+            <div class="dept-detail-sub" id="dept-detail-sub"></div>
+          </div>
+          <button class="btn btn-p" style="margin-left:auto" onclick="Departments.openAddCourse()">＋ Add Course</button>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-size:14px;font-weight:600;color:var(--text)">Courses <span id="dept-course-count" style="font-size:12px;color:var(--text3);font-weight:400"></span></div>
+        </div>
+        <div class="course-grid" id="dept-course-grid"></div>
+      </div>
+    </div>
+
+    <!-- ══════════ COURSES ══════════ -->
+    <div class="pg hidden" id="pg-courses">
+      <!-- Dept box selection -->
+      <div id="courses-dept-view">
+        <div class="pg-header">
+          <div class="ph-left"><h2>Courses</h2><p>Select a department to view and manage its courses</p></div>
+        </div>
+        <div class="dept-box-grid" id="courses-dept-boxes"></div>
+      </div>
+      <!-- Course list per dept -->
+      <div id="courses-list-view" class="hidden">
+        <div class="back-bar">
+          <button class="back-btn" onclick="Courses.backToDepts()">← All Departments</button>
+          <div style="font-size:16px;font-weight:600;color:var(--text)" id="courses-dept-name"></div>
+          <span style="font-size:12px;color:var(--text3)" id="courses-dept-sub"></span>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <div><div class="card-title">Courses <span id="courses-count" style="font-weight:400;color:var(--text3);font-size:12px"></span></div></div>
+            <button class="btn btn-p btn-sm" onclick="Courses.openAdd()">＋ Add Course</button>
+          </div>
+          <div class="card-body" style="padding:0">
+            <table class="dtable">
+              <thead><tr><th>#</th><th>Course Name</th><th>Duration</th><th>Type</th><th>Seats</th><th>Enrolled</th><th></th></tr></thead>
+              <tbody id="courses-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ SUBJECTS ══════════ -->
+    <div class="pg hidden" id="pg-subjects">
+      <!-- Step 1: Select dept -->
+      <div id="subj-dept-view">
+        <div class="pg-header">
+          <div class="ph-left"><h2>Subjects</h2><p>Select a department to browse subjects</p></div>
+        </div>
+        <div class="dept-box-grid" id="subj-dept-boxes"></div>
+      </div>
+      <!-- Step 2: Select course -->
+      <div id="subj-course-view" class="hidden">
+        <div class="back-bar">
+          <button class="back-btn" onclick="Subjects.backToDepts()">← Departments</button>
+          <div style="font-size:15px;font-weight:600;color:var(--text)" id="subj-course-dept-name"></div>
+        </div>
+        <div class="pg-header" style="margin-top:4px">
+          <div class="ph-left"><p>Select a course to view its subjects</p></div>
+        </div>
+        <div class="course-grid" id="subj-course-boxes"></div>
+      </div>
+      <!-- Step 3: Subject list -->
+      <div id="subj-list-view" class="hidden">
+        <div class="back-bar">
+          <button class="back-btn" onclick="Subjects.backToCourses()">← Courses</button>
+          <div>
+            <div style="font-size:15px;font-weight:600;color:var(--text)" id="subj-list-course-name"></div>
+            <div style="font-size:12px;color:var(--text3)" id="subj-list-dept-name"></div>
+          </div>
+          <span style="margin-left:auto;font-size:12px;color:var(--text3)">👁 Read-only — managed by each department's HOD/Co-HOD</span>
+        </div>
+        <!-- Sem filter tabs -->
+        <div class="sem-tabs">
+          <button class="sem-tab active" data-sem="all" onclick="Subjects.setSem('all')">All Semesters</button>
+          <button class="sem-tab" data-sem="1" onclick="Subjects.setSem('1')">Sem I</button>
+          <button class="sem-tab" data-sem="2" onclick="Subjects.setSem('2')">Sem II</button>
+          <button class="sem-tab" data-sem="3" onclick="Subjects.setSem('3')">Sem III</button>
+          <button class="sem-tab" data-sem="4" onclick="Subjects.setSem('4')">Sem IV</button>
+          <button class="sem-tab" data-sem="5" onclick="Subjects.setSem('5')">Sem V</button>
+          <button class="sem-tab" data-sem="6" onclick="Subjects.setSem('6')">Sem VI</button>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">Subjects <span id="subj-count" style="font-weight:400;color:var(--text3);font-size:12px"></span></div>
+          </div>
+          <div class="card-body" style="padding:0">
+            <table class="dtable">
+              <thead><tr><th>#</th><th>Subject Name</th><th>Code</th><th>Credits</th><th>Semester</th><th>Type</th><th>Teacher</th></tr></thead>
+              <tbody id="subj-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="pager" id="subj-pager"></div>
+      </div>
+    </div>
+
+    <!-- ══════════ HOD / CO-HOD ══════════ -->
+    <div class="pg hidden" id="pg-hod">
+      <div class="pg-header">
+        <div class="ph-left"><h2>HOD / Co-HOD <span id="hod-count" class="cntag"></span></h2>
+          <p>Each department can have up to one HOD and one Co-HOD. You can add, edit, and remove them here. Super Admin can view them too, but for viewing only.</p>
+        </div>
+        <button class="btn btn-p" onclick="HOD.openAddModal()">＋ Appoint HOD / Co-HOD</button>
+      </div>
+      <div class="card">
+        <div class="card-body" style="padding:0">
+          <table class="dtable">
+            <thead><tr><th>#</th><th>Name</th><th>Role</th><th>Department</th><th>Email</th><th>Mobile</th><th>Status</th><th></th></tr></thead>
+            <tbody id="hod-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ TEACHERS ══════════ -->
+    <div class="pg hidden" id="pg-teachers">
+      <div class="pg-header">
+        <div class="ph-left"><h2>Teachers <span id="teacher-count" class="cntag"></span></h2><p>All faculty members across departments</p></div>
+        <button class="btn btn-p" onclick="Teachers.openAddModal()">＋ Add Teacher</button>
+      </div>
+      <div class="toolbar">
+        <div class="sw">
+          <input type="text" id="teacher-search" placeholder="Search by name, email, department…"/>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body" style="padding:0">
+          <table class="dtable">
+            <thead><tr><th>#</th><th>Name</th><th>Department</th><th>Qualification</th><th>Experience</th><th>Mobile</th><th>Status</th><th></th></tr></thead>
+            <tbody id="teacher-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="pager" id="teacher-pager"></div>
+    </div>
+
+    <!-- ══════════ STUDENTS ══════════ -->
+    <div class="pg hidden" id="pg-students">
+      <div class="pg-header">
+        <div class="ph-left"><h2>Students <span id="student-count" class="cntag"></span></h2><p>All enrolled students across departments</p></div>
+        <button class="btn btn-p" onclick="Students.openAddModal()">＋ Add Student</button>
+      </div>
+      <div class="toolbar">
+        <div class="sw">
+          <input type="text" id="student-search" placeholder="Search by name, email, roll number…"/>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body" style="padding:0">
+          <table class="dtable">
+            <thead><tr><th>#</th><th>Name</th><th>Roll No.</th><th>Department</th><th>Course</th><th>Semester</th><th>Mobile</th><th>Status</th><th></th></tr></thead>
+            <tbody id="student-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="pager" id="student-pager"></div>
+    </div>
+
+    <!-- ══════════ NOTICES ══════════ -->
+    <div class="pg hidden" id="pg-notices">
+      <div class="pg-header">
+        <div class="ph-left"><h2>Notices</h2><p>View and issue college notices</p></div>
+        <button class="btn btn-p" onclick="Notices.openSend()">📢 New Notice</button>
+      </div>
+      <!-- Filter tabs -->
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+        <button class="sem-tab active notice-filter-btn" data-f="all" onclick="Notices.setFilter('all')">All Notices</button>
+        <button class="sem-tab notice-filter-btn" data-f="admin" onclick="Notices.setFilter('admin')">Sent by Me</button>
+        <button class="sem-tab notice-filter-btn" data-f="hod" onclick="Notices.setFilter('hod')">Sent by HODs</button>
+      </div>
+      <div id="notice-list"></div>
+    </div>
+
+    <!-- ══════════ SETTINGS ══════════ -->
+    <div class="pg hidden" id="pg-settings">
+      <div class="pg-header"><div class="ph-left"><h2></h2><p>College & profile configuration</p></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;flex-wrap:wrap">
+        <div class="card">
+          <div class="card-head"><div class="card-title">College Information</div></div>
+          <div class="card-body">
+            <div class="fg"><label>College Name</label><input class="fi" id="setting-college-name" placeholder="Enter college name"/></div>
+            <div class="fg"><label>Institution Code</label><input class="fi" id="setting-inst-code" placeholder="e.g. GTU-009"/></div>
+            <div class="fg"><label>Academic Year</label><input class="fi" id="setting-acad-year" placeholder="e.g. 2025-2026"/></div>
+            <button class="btn btn-p" onclick="saveSettings()">Save Changes</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">Principal Profile</div></div>
+          <div class="card-body">
+            <div class="fg"><label>Full Name</label><input class="fi" id="setting-principal-name" placeholder="Dr. Full Name"/></div>
+            <div class="fg"><label>Email</label><input class="fi" id="setting-email" readonly/></div>
+            <div class="fg"><label>Phone</label><input class="fi" id="setting-phone" placeholder="+91 98765 43210"/></div>
+            <div class="fg"><label>Current Password</label><input class="fi" id="setting-cur-pwd" type="password" placeholder="••••••••"/></div>
+            <div class="fg"><label>New Password</label><input class="fi" id="setting-new-pwd" type="password" placeholder="••••••••"/></div>
+            <button class="btn btn-p" onclick="saveProfile()">Update Profile</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">🎨 Appearance</div></div>
+          <div class="card-body">
+            <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Toggle between light and dark mode.</p>
+            <button class="btn btn-p" onclick="UI.toggleDarkMode()">🌙 Toggle Dark / Light Mode</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end #content -->
+</div><!-- end #main -->
+
+<!-- ════════════ MODALS ════════════ -->
+
+<!-- DEPARTMENT MODAL -->
+<div class="modal" id="modal-dept">
+  <div class="mbox">
+    <div class="mh">
+      <div class="mt" id="dept-modal-title">New Department</div>
+      <button class="mc" onclick="UI.closeModal('modal-dept')">✕</button>
+    </div>
+    <form id="dept-form" onsubmit="return false">
+      <div class="mb">
+        <input type="hidden" id="dept-id"/>
+        <div class="fg"><label>Department Name *</label><input class="fi" id="dept-name" placeholder="e.g. Computer Applications"/></div>
+        <div class="form-row">
+          <div class="fg"><label>Department Code *</label><input class="fi" id="dept-code" placeholder="e.g. CA"/></div>
+          <div class="fg"><label>Established Year</label><input class="fi" id="dept-year" type="number" placeholder="2020"/></div>
+        </div>
+        <div class="fg"><label>Description</label><textarea class="fi" id="dept-desc" rows="3" placeholder="Short description..."></textarea></div>
+        <div class="fg"><label>Department Icon</label>
+          <select class="fi" id="dept-icon">
+            <option value="fa-laptop-code">💻 Computer Science / IT</option>
+            <option value="fa-atom">⚛️ Physics / Science</option>
+            <option value="fa-flask">🧪 Chemistry / Lab</option>
+            <option value="fa-calculator">🔢 Mathematics</option>
+            <option value="fa-bolt">⚡ Electrical / Electronics</option>
+            <option value="fa-cogs">⚙️ Mechanical</option>
+            <option value="fa-heartbeat">❤️ Medical / Life Sciences</option>
+            <option value="fa-paint-brush">🎨 Arts & Design</option>
+            <option value="fa-chart-line">📈 Commerce / Business</option>
+            <option value="fa-building">🏛️ Civil / Architecture</option>
+          </select>
+        </div>
+      </div>
+      <div class="mf">
+        <button class="btn btn-g" onclick="UI.closeModal('modal-dept')">Cancel</button>
+        <button class="btn btn-p" onclick="Departments.save()">💾 Save Department</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- COURSE MODAL (shared by Departments & Courses pages) -->
+<div class="modal" id="modal-course">
+  <div class="mbox">
+    <div class="mh">
+      <div class="mt" id="course-modal-title">Add Course</div>
+      <button class="mc" onclick="UI.closeModal('modal-course')">✕</button>
+    </div>
+    <form id="course-form" onsubmit="return false">
+      <div class="mb">
+        <input type="hidden" id="course-id"/>
+        <input type="hidden" id="course-dept-id"/>
+        <div class="fg"><label>Department</label><input class="fi" id="course-dept-label" readonly style="background:var(--blue-light);color:var(--blue);font-weight:500"/></div>
+        <div class="fg"><label>Course Name *</label><input class="fi" id="course-name" placeholder="e.g. BCA, MCA, B.Sc Computer Science"/></div>
+        <div class="form-row">
+          <div class="fg"><label>Duration</label>
+            <select class="fi" id="course-duration">
+              <option>1 Year</option><option>2 Years</option><option>3 Years</option><option>4 Years</option><option>5 Years</option>
+            </select>
+          </div>
+          <div class="fg"><label>Type</label>
+            <select class="fi" id="course-type">
+              <option>UG</option><option>PG</option><option>Diploma</option><option>PhD</option>
+            </select>
+          </div>
+        </div>
+        <div class="fg"><label>Total Seats</label><input class="fi" id="course-seats" type="number" placeholder="60"/></div>
+      </div>
+      <div class="mf">
+        <button class="btn btn-g" onclick="UI.closeModal('modal-course')">Cancel</button>
+        <button class="btn btn-p" onclick="typeof Courses !== 'undefined' && document.getElementById('pg-courses').classList.contains('hidden') ? Departments.saveCourse() : Courses.save()">💾 Save Course</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- SUBJECT MODAL -->
+<div class="modal" id="modal-subject">
+  <div class="mbox">
+    <div class="mh">
+      <div class="mt">Add Subject</div>
+      <button class="mc" onclick="UI.closeModal('modal-subject')">✕</button>
+    </div>
+    <form id="subj-form" onsubmit="return false">
+      <div class="mb">
+        <input type="hidden" id="subj-id"/>
+        <input type="hidden" id="subj-course-select"/>
+        <input type="hidden" id="subj-dept"/>
+        <div class="fg"><label>Subject Name *</label><input class="fi" id="subj-name" placeholder="e.g. Data Structures"/></div>
+        <div class="form-row">
+          <div class="fg"><label>Subject Code *</label><input class="fi" id="subj-code" placeholder="CS301"/></div>
+          <div class="fg"><label>Credits</label><input class="fi" id="subj-credits" type="number" placeholder="4"/></div>
+        </div>
+        <div class="form-row">
+          <div class="fg"><label>Semester</label>
+            <select class="fi" id="subj-sem">
+              <option value="1">Semester I</option><option value="2">Semester II</option>
+              <option value="3">Semester III</option><option value="4">Semester IV</option>
+              <option value="5">Semester V</option><option value="6">Semester VI</option>
+            </select>
+          </div>
+          <div class="fg"><label>Type</label>
+            <select class="fi" id="subj-type">
+              <option>Theory</option><option>Practical</option><option>Elective</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="mf">
+        <button class="btn btn-g" onclick="UI.closeModal('modal-subject')">Cancel</button>
+        <button class="btn btn-p" onclick="Subjects.save()">➕ Add Subject</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- TEACHER MODAL -->
+<div class="modal" id="modal-hod">
+  <div class="mbox">
+    <div class="mh">
+      <div class="mt" id="hod-modal-title">Appoint HOD / Co-HOD</div>
+      <button class="mc" onclick="HOD._closeModal()">✕</button>
+    </div>
+    <form id="hod-form" onsubmit="return false">
+      <div class="mb">
+        <div class="form-row">
+          <div class="fg"><label>Department *</label>
+            <select class="fi" id="h-dept"><option value="">— Select Department —</option></select>
+          </div>
+          <div class="fg"><label>Role *</label>
+            <select class="fi" id="h-role"><option value="hod">HOD</option><option value="co_hod">Co-HOD</option></select>
+          </div>
+        </div>
+        <div class="fg"><label>Name *</label><input class="fi" id="h-name" placeholder="Dr. Ankit Shah"/></div>
+        <div class="fg"><label>Email *</label><input class="fi" id="h-email" type="email" placeholder="hod@college.edu"/></div>
+        <div class="form-row">
+          <div class="fg"><label>Mobile</label><input class="fi" id="h-mobile" placeholder="+91 98765 43210"/></div>
+          <div class="fg"><label>Qualification</label><input class="fi" id="h-qual" placeholder="Ph.D, M.Tech…"/></div>
+        </div>
+        <p style="font-size:12px;color:var(--text3);margin-top:4px">Each department can have at most one HOD and one Co-HOD at a time.</p>
+      </div>
+      <div class="mf">
+        <button class="btn btn-g" onclick="HOD._closeModal()">Cancel</button>
+        <button class="btn btn-p" id="hod-submit-btn" onclick="HOD.add()">➕ Appoint</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal" id="modal-teacher">
+  <div class="mbox">
+    <div class="mh">
+      <div class="mt">Add Teacher</div>
+      <button class="mc" onclick="UI.closeModal('modal-teacher')">✕</button>
+    </div>
+    <form id="teacher-form" onsubmit="return false">
+      <div class="mb">
+        <div class="form-row">
+          <div class="fg"><label>First Name *</label><input class="fi" id="t-name" placeholder="Dr. Ankit"/></div>
+          <div class="fg"><label>Last Name</label><input class="fi" id="t-lname" placeholder="Shah"/></div>
+        </div>
+        <div class="fg"><label>Email *</label><input class="fi" id="t-email" type="email" placeholder="teacher@college.edu"/></div>
+        <div class="form-row">
+          <div class="fg"><label>Department</label>
+            <select class="fi" id="t-dept"><option value="">— Select Department —</option></select>
+          </div>
+          <div class="fg"><label>Mobile</label><input class="fi" id="t-mobile" placeholder="+91 98765 43210"/></div>
+        </div>
+        <div class="form-row">
+          <div class="fg"><label>Qualification</label><input class="fi" id="t-qual" placeholder="Ph.D, M.Tech…"/></div>
+          <div class="fg"><label>Experience (yrs)</label><input class="fi" id="t-exp" type="number" placeholder="5"/></div>
+        </div>
+      </div>
+      <div class="mf">
+        <button class="btn btn-g" onclick="UI.closeModal('modal-teacher')">Cancel</button>
+        <button class="btn btn-p" onclick="Teachers.add()">➕ Add Teacher</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- STUDENT MODAL -->
+<div class="modal" id="modal-student">
+  <div class="mbox">
+    <div class="mh">
+      <div class="mt">Add Student</div>
+      <button class="mc" onclick="UI.closeModal('modal-student')">✕</button>
+    </div>
+    <form id="student-form" onsubmit="return false">
+      <div class="mb">
+        <div class="form-row">
+          <div class="fg"><label>First Name *</label><input class="fi" id="stu-fname" placeholder="Rohan"/></div>
+          <div class="fg"><label>Last Name</label><input class="fi" id="stu-lname" placeholder="Verma"/></div>
+        </div>
+        <div class="fg"><label>Email *</label><input class="fi" id="stu-email" type="email" placeholder="student@college.edu"/></div>
+        <div class="form-row">
+          <div class="fg"><label>Roll Number</label><input class="fi" id="stu-roll" placeholder="CA2024001"/></div>
+          <div class="fg"><label>Mobile</label><input class="fi" id="stu-mobile" placeholder="+91 98765 43210"/></div>
+        </div>
+        <div class="form-row">
+          <div class="fg"><label>Department</label>
+            <select class="fi" id="stu-dept"><option value="">— Select Department —</option></select>
+          </div>
+          <div class="fg"><label>Course</label>
+            <select class="fi" id="stu-course"><option value="">— Select Course —</option></select>
+          </div>
+        </div>
+        <div class="fg"><label>Semester</label>
+          <select class="fi" id="stu-sem">
+            <option value="1">Semester 1</option><option value="2">Semester 2</option>
+            <option value="3">Semester 3</option><option value="4">Semester 4</option>
+            <option value="5">Semester 5</option><option value="6">Semester 6</option>
+          </select>
+        </div>
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+          <div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Parent / Guardian Info</div>
+          <div class="form-row">
+            <div class="fg"><label>Parent Name</label><input class="fi" id="parent-name" placeholder="Parent full name"/></div>
+            <div class="fg"><label>Parent Mobile</label><input class="fi" id="parent-mobile" placeholder="+91 98765 43210"/></div>
+          </div>
+          <div class="fg"><label>Parent Email <span style="color:#e5484d">*</span></label><input class="fi" id="parent-email" type="email" required placeholder="Required — becomes the parent's login email"/></div>
+        </div>
+      </div>
+      <div class="mf">
+        <button class="btn btn-g" onclick="UI.closeModal('modal-student')">Cancel</button>
+        <button class="btn btn-p" onclick="Students.add()">➕ Add Student</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- NOTICE MODAL -->
+<div class="modal" id="modal-notice">
+  <div class="mbox">
+    <div class="mh">
+      <div class="mt">📢 New Notice</div>
+      <button class="mc" onclick="UI.closeModal('modal-notice')">✕</button>
+    </div>
+    <form id="notice-form" onsubmit="return false">
+      <div class="mb">
+        <div class="fg"><label>Notice Title *</label><input class="fi" id="notice-title" placeholder="e.g. Exam Schedule – Semester III"/></div>
+        <div class="form-row">
+          <div class="fg"><label>Send To</label>
+            <select class="fi" id="notice-role">
+              <option value="all">Everyone</option>
+              <option value="hod">HODs Only</option>
+              <option value="teacher">Teachers Only</option>
+              <option value="student">Students Only</option>
+            </select>
+          </div>
+          <div class="fg"><label>Priority</label>
+            <select class="fi" id="notice-priority">
+              <option>Normal</option><option>Important</option><option>Urgent</option>
+            </select>
+          </div>
+        </div>
+        <div class="fg"><label>Department (optional)</label>
+          <select class="fi" id="notice-dept">
+            <option value="">— All Departments —</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="fg"><label>Course (optional)</label>
+            <input class="fi" id="notice-course" placeholder="e.g. BCA — leave blank for all courses"/>
+          </div>
+          <div class="fg"><label>Semester (optional)</label>
+            <select class="fi" id="notice-semester">
+              <option value="">All Semesters</option>
+              <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option>
+            </select>
+          </div>
+        </div>
+        <p style="font-size:11px;color:var(--text3);margin:-4px 0 6px">Leave course/semester blank to reach everyone in the department/college; set both to target one specific class.</p>
+        <div class="fg"><label>Message *</label><textarea class="fi" id="notice-body" rows="5" placeholder="Write your notice content here…"></textarea></div>
+        <div class="fg"><label>Attach PDF (optional, max 5MB)</label>
+          <input type="file" class="fi" id="notice-file" accept="application/pdf"/>
+        </div>
+      </div>
+      <div class="mf">
+        <button class="btn btn-g" onclick="UI.closeModal('modal-notice')">Cancel</button>
+        <button class="btn btn-p" onclick="Notices.send()">📢 Publish Notice</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- SCRIPTS — load order matters -->
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/departments.js"></script>
+<script src="js/courses.js"></script>
+<script src="js/subjects.js"></script>
+<script src="js/hod.js"></script>
+<script src="js/teachers.js"></script>
+<script src="js/students.js"></script>
+<script src="js/notices.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
