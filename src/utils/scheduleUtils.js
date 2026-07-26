@@ -43,6 +43,8 @@ export function groupSchedule(docs) {
       teacherId: d.teacher?._id || d.teacher,
       room: d.room || '',
       type: d.type || 'Lecture',
+      labRollStart: d.labRollStart || '',
+      labRollEnd: d.labRollEnd || '',
       startTime: d.startTime,
       endTime: d.endTime,
       time: d.time || (d.startTime ? `${to12h(d.startTime)}${d.endTime ? ' – ' + to12h(d.endTime) : ''}` : '')
@@ -65,6 +67,8 @@ export function groupByDay(docs) {
       teacher: d.teacherName || '',
       room: d.room || '',
       type: d.type || 'Lecture',
+      labRollStart: d.labRollStart || '',
+      labRollEnd: d.labRollEnd || '',
       startTime: d.startTime,
       endTime: d.endTime,
       time: d.time || (d.startTime ? `${to12h(d.startTime)}${d.endTime ? ' – ' + to12h(d.endTime) : ''}` : ''),

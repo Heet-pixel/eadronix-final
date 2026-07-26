@@ -28,6 +28,8 @@ const ScheduleSchema = new mongoose.Schema(
     teacher:     { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     room:        { type: String, default: '' },
     type:        { type: String, default: 'Lecture' },
+    labRollStart:{ type: String, default: '' },
+    labRollEnd:  { type: String, default: '' },
     course:      { type: String, required: true },
     semester:    { type: Number, required: true },
     division:    { type: String, default: '' },

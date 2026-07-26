@@ -12,6 +12,24 @@ import { storeDataUri } from '../utils/gridfs.js';
 const router = Router();
 router.use(requireAuth, allowRoles('student', 'parent'));
 
+function rollInRange(roll, start, end) {
+  if (!start && !end) return true;
+  const value = String(roll || '').trim();
+  const from = String(start || '').trim();
+  const to = String(end || '').trim();
+  if (!value || !from || !to) return false;
+  if (/^\d+$/.test(value) && /^\d+$/.test(from) && /^\d+$/.test(to)) {
+    const n = BigInt(value);
+    const a = BigInt(from);
+    const b = BigInt(to);
+    return n >= (a < b ? a : b) && n <= (a < b ? b : a);
+  }
+  const low = from.localeCompare(to, undefined, { numeric: true }) <= 0 ? from : to;
+  const high = low === from ? to : from;
+  return value.localeCompare(low, undefined, { numeric: true }) >= 0 &&
+    value.localeCompare(high, undefined, { numeric: true }) <= 0;
+}
+
 async function currentStudent(req, res) {
   const q = { isDeleted: false };
   if (req.user.role === 'parent') {
@@ -64,7 +82,9 @@ router.get('/dashboard', asyncHandler(async (req, res) => {
 
   // Today's classes — filter the class's whole-week timetable down to today's day.
   const todayDayName = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][new Date().getDay()];
+  const studentRoll = student.roll || student.rollNo || student.rollNumber || '';
   const timetableToday = data.timetable
+    .filter(t => t.type !== 'Lab' || rollInRange(studentRoll, t.labRollStart, t.labRollEnd))
     .filter(t => t.day === todayDayName)
     .sort((a, b) => String(a.startTime || '').localeCompare(String(b.startTime || '')))
     .map(t => ({ time: t.time || `${t.startTime || ''}${t.endTime ? ' - ' + t.endTime : ''}`, subject: t.subjectName, room: t.room, type: t.type }));
@@ -204,7 +224,11 @@ router.get('/timetable', asyncHandler(async (req, res) => {
   if (student.course) filter.course = student.course;
   if (student.semester || student.sem) filter.semester = student.semester || student.sem;
 
-  const docs = await Schedule.find(filter).lean();
+  const studentRoll = student.roll || student.rollNo || student.rollNumber || '';
+  const docs = (await Schedule.find(filter).lean()).filter(slot => {
+    if (slot.type !== 'Lab') return true;
+    return rollInRange(studentRoll, slot.labRollStart, slot.labRollEnd);
+  });
 
   // Group by day
   const timetable = groupByDay(docs);

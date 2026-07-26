@@ -202,9 +202,17 @@ function renderDayView(course, sem, day) {
             ${teacherChoices.map(t => `<option value="${t.id || t._id}" ${String(slot.teacherId || '') === String(t.id || t._id) ? 'selected' : ''}>${escHtml(t.name)}</option>`).join('')}
           </select>
           <input class="ssc-room" type="text" value="${escHtml(slot.room || '')}" placeholder="Room (optional)" onchange="updateSlot('${course}',${sem},'${day}',${idx},'room',this.value)">
-          <select class="ssc-type" onchange="updateSlot('${course}',${sem},'${day}',${idx},'type',this.value); autoCalcExistingSlotEnd('${course}',${sem},'${day}',${idx})">
+          <select class="ssc-type" onchange="updateSlot('${course}',${sem},'${day}',${idx},'type',this.value); autoCalcExistingSlotEnd('${course}',${sem},'${day}',${idx}); renderDayView('${course}',${sem},'${day}')">
             ${['Lecture','Lab','Tutorial'].map(t => `<option ${(slot.type || 'Lecture') === t ? 'selected' : ''}>${t}</option>`).join('')}
           </select>
+          <div class="ssc-lab-range ${(slot.type || 'Lecture') === 'Lab' ? 'show' : ''}">
+            <select onchange="updateSlot('${course}',${sem},'${day}',${idx},'labRollStart',this.value)">
+              ${renderRollOptions(course, sem, slot.labRollStart, 'Start roll no.')}
+            </select>
+            <select onchange="updateSlot('${course}',${sem},'${day}',${idx},'labRollEnd',this.value)">
+              ${renderRollOptions(course, sem, slot.labRollEnd, 'End roll no.')}
+            </select>
+          </div>
         </div>
         <button class="ssc-del" onclick="removeSlot('${course}',${sem},'${day}',${idx})" title="Remove slot">✕</button>
       </div>
@@ -233,6 +241,22 @@ function updateSlotTeacher(course, sem, day, idx, teacherId) {
 
 function escHtml(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+function getRollChoices(course, sem) {
+  return (typeof allStudents !== 'undefined' ? allStudents : [])
+    .filter(s => s.course === course && String(s.sem || s.semester || 1) === String(sem) && (s.roll || s.rollNo || s.rollNumber))
+    .map(s => String(s.roll || s.rollNo || s.rollNumber).trim())
+    .filter(Boolean)
+    .filter((roll, idx, arr) => arr.indexOf(roll) === idx)
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+}
+
+function renderRollOptions(course, sem, selected, placeholder) {
+  const rolls = getRollChoices(course, sem);
+  if (!rolls.length) return `<option value="">No student rolls found</option>`;
+  return `<option value="">-- ${placeholder} --</option>` +
+    rolls.map(r => `<option value="${escHtml(r)}" ${String(selected || '') === r ? 'selected' : ''}>${escHtml(r)}</option>`).join('');
+}
+
 /* ─── Slot CRUD (local, then save to DB) ───────────────────────────── */
 function updateSlot(course, sem, day, idx, field, value) {
   if (!scheduleData[course]) scheduleData[course] = {};
@@ -241,6 +265,10 @@ function updateSlot(course, sem, day, idx, field, value) {
   const slot = scheduleData[course][sem][day][idx];
   if (slot) {
     slot[field] = value;
+    if (field === 'type' && value !== 'Lab') {
+      slot.labRollStart = '';
+      slot.labRollEnd = '';
+    }
     if (field === 'startTime' || field === 'endTime') {
       slot.time = `${to12h(slot.startTime || '')}${slot.endTime ? ' – ' + to12h(slot.endTime) : ''}`;
     }
@@ -335,6 +363,13 @@ function openAddSlotModal(course, sem) {
             </select>
             <div style="font-size:11px;color:var(--muted);margin-top:4px">Lecture → end time auto-set 1 hr later · Lab → 2 hrs later · Tutorial → enter manually</div>
           </div>
+          <div class="form-group slot-lab-range" id="slotLabRange" style="display:none">
+            <label>Student Roll Number Range</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <select id="slotLabRollStart">${renderRollOptions(course, sem, '', 'Starting roll number')}</select>
+              <select id="slotLabRollEnd">${renderRollOptions(course, sem, '', 'Ending roll number')}</select>
+            </div>
+          </div>
           <div style="display:flex;gap:8px;justify-content:flex-end">
             <button class="btn btn-ghost" onclick="closeAddSlotModal()">Cancel</button>
             <button class="btn btn-primary" onclick="confirmAddSlot()">Add Slot</button>
@@ -353,6 +388,8 @@ function autoCalcSlotEnd() {
   if (!startEl || !typeEl || !endEl) return;
   const computed = calcEndTime(startEl.value, typeEl.value);
   if (computed) endEl.value = computed; // Tutorial: computed is '' → leave whatever the HOD already typed
+  const rangeEl = document.getElementById('slotLabRange');
+  if (rangeEl) rangeEl.style.display = typeEl.value === 'Lab' ? 'block' : 'none';
 }
 function closeAddSlotModal() { document.getElementById('addSlotOverlay')?.remove(); }
 function confirmAddSlot() {
@@ -364,8 +401,11 @@ function confirmAddSlot() {
   const teacherId = document.getElementById('slotTeacher').value;
   const room = document.getElementById('slotRoom').value.trim();
   const type = document.getElementById('slotType').value;
+  const labRollStart = document.getElementById('slotLabRollStart')?.value.trim() || '';
+  const labRollEnd = document.getElementById('slotLabRollEnd')?.value.trim() || '';
   if (!subjectId) { showToast('Please select a subject from the Admin subject list.', 'error'); return; }
   if (!teacherId) { showToast('Please select a teacher.', 'error'); return; }
+  if (type === 'Lab' && (!labRollStart || !labRollEnd)) { showToast('Please enter starting and ending roll numbers for this lab.', 'error'); return; }
   if (!_isLectureDurationValid(startTime, endTime)) { showToast('A lecture must be at least 30 minutes long.', 'error'); return; }
   const subjChoice = getSubjObjects(course, sem).find(s => String(s.id) === String(subjectId));
   const teacherChoice = (typeof allTeachers !== 'undefined' ? allTeachers : []).find(t => String(t.id || t._id) === String(teacherId));
@@ -375,7 +415,7 @@ function confirmAddSlot() {
   scheduleData[course][sem][day].push({
     subject: subjectId, subjectName: subjChoice ? subjChoice.name : '',
     teacherId: teacherId, teacher: teacherChoice ? teacherChoice.name : '', teacherName: teacherChoice ? teacherChoice.name : '',
-    startTime, endTime, room, type,
+    startTime, endTime, room, type, labRollStart, labRollEnd,
     time: `${to12h(startTime)}${endTime ? ' – ' + to12h(endTime) : ''}`
   });
   // Sort by startTime
@@ -396,17 +436,25 @@ async function saveFullSchedule(course, sem) {
   // Flatten scheduleData[course][sem] into slots array
   const dayMap = (scheduleData[course] && scheduleData[course][sem]) ? scheduleData[course][sem] : {};
   const slots = [];
+  let validationError = '';
   for (const day of DAYS_ORDER) {
     const daySlots = dayMap[day] || [];
     daySlots.forEach(s => {
+      if (validationError) return;
       if (!s.subject && !s.subjectName) return;
+      if ((s.type || 'Lecture') === 'Lab' && (!s.labRollStart || !s.labRollEnd)) {
+        validationError = `Please enter starting and ending roll numbers for the lab on ${day}.`;
+        return;
+      }
       slots.push({
         day, subjectId: s.subject || '', subjectName: s.subjectName || '',
         teacher: s.teacherId || '', teacherName: s.teacherName || '',
-        startTime: s.startTime || '', endTime: s.endTime || '', room: s.room || '', type: s.type || 'Lecture', time: s.time || ''
+        startTime: s.startTime || '', endTime: s.endTime || '', room: s.room || '', type: s.type || 'Lecture', time: s.time || '',
+        labRollStart: s.labRollStart || '', labRollEnd: s.labRollEnd || ''
       });
     });
   }
+  if (validationError) { showToast(validationError, 'error'); return; }
   try {
     const res = await apiJson('/api/hod/schedule', { method: 'POST', body: JSON.stringify({ course, semester: sem, slots }) });
     showToast(`✅ Schedule saved! ${res.saved} slots updated. Teachers & students will see changes immediately.`);

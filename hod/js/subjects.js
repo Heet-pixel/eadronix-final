@@ -30,32 +30,38 @@ function renderSubjectsPage() {
   });
 
   el.innerHTML = `
-    <div class="card" style="margin-bottom:16px">
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">${courseTabs || '<span style="color:var(--text3)">No courses in your department yet — ask Admin to add one.</span>'}</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px">${semTabs}</div>
+    <div class="subject-manager">
+      <div class="subject-filter-card">
+        <div>
+          <div class="subject-panel-title">Subjects</div>
+          <div class="subject-panel-subtitle">Manage department subjects by course and semester.</div>
+        </div>
+        <div class="subject-filter-group">${courseTabs || '<span style="color:var(--text3)">No courses in your department yet — ask Admin to add one.</span>'}</div>
+        <div class="subject-filter-group">${semTabs}</div>
+      </div>
+      <div class="subject-toolbar">
+        <div class="subject-count">${list.length} subject${list.length !== 1 ? 's' : ''}${subjFilterCourse ? ` in ${_html(subjFilterCourse)}` : ''}${subjFilterSem ? ` Sem ${_html(subjFilterSem)}` : ''}</div>
+        <button class="btn btn-primary btn-sm" onclick="openSubjectModal()" ${subjFilterCourse && subjFilterSem ? '' : 'disabled'}>＋ Add Subject</button>
+      </div>
+      <div class="subject-grid">
+        ${list.length ? list.map(s => `
+          <div class="subject-card">
+            <div class="subject-card-main">
+              <div class="subject-code">${_html(s.code || 'No code')}</div>
+              <div class="subject-name">${_html(s.name)}</div>
+              <div class="subject-meta">
+                <span>${_html(s.type || 'Subject')}</span>
+                <span>${_html(s.teacher?.name || 'Unassigned')}</span>
+              </div>
+            </div>
+            <div class="subject-card-actions">
+              <button class="ibtn" onclick="openSubjectModal('${s._id || s.id}')" title="Edit subject">✎</button>
+              <button class="ibtn del" onclick="deleteSubject('${s._id || s.id}','${_esc(s.name)}')" title="Delete subject">🗑</button>
+            </div>
+          </div>`).join('') : `<div class="subject-empty">No subjects yet for ${_html(subjFilterCourse || '—')} Sem ${_html(subjFilterSem || '—')}.</div>`}
+      </div>
     </div>
-    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-      <button class="btn btn-primary btn-sm" onclick="openSubjectModal()" ${subjFilterCourse && subjFilterSem ? '' : 'disabled'}>＋ Add Subject</button>
-    </div>
-    <div class="card">
-      <table class="data-table">
-        <thead><tr><th>Name</th><th>Code</th><th>Credits</th><th>Type</th><th>Teacher</th><th></th></tr></thead>
-        <tbody>
-          ${list.length ? list.map(s => `
-            <tr>
-              <td>${_html(s.name)}</td>
-              <td>${_html(s.code || '—')}</td>
-              <td>${s.credits ?? '—'}</td>
-              <td>${_html(s.type || '—')}</td>
-              <td>${_html(s.teacher?.name || '—')}</td>
-              <td style="white-space:nowrap">
-                <button class="ibtn" onclick="openSubjectModal('${s._id || s.id}')">✎</button>
-                <button class="ibtn del" onclick="deleteSubject('${s._id || s.id}','${_esc(s.name)}')">🗑</button>
-              </td>
-            </tr>`).join('') : `<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px">No subjects yet for ${_html(subjFilterCourse || '—')} Sem ${_html(subjFilterSem || '—')}.</td></tr>`}
-        </tbody>
-      </table>
-    </div>`;
+    `;
 }
 
 function setSubjCourse(c) { subjFilterCourse = c; subjFilterSem = ''; renderSubjectsPage(); }
@@ -73,10 +79,7 @@ function openSubjectModal(id) {
         <div class="modal-body" style="display:flex;flex-direction:column;gap:12px;padding:20px">
           <div class="form-group"><label>Subject Name</label><input type="text" id="subjName" value="${_html(existing?.name || '')}"></div>
           <div class="form-group"><label>Code (optional)</label><input type="text" id="subjCode" value="${_html(existing?.code || '')}"></div>
-          <div class="form-group" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            <div><label>Credits</label><input type="number" id="subjCredits" min="1" max="10" value="${existing?.credits || 3}"></div>
-            <div><label>Type</label><select id="subjType"><option ${(existing?.type||'Theory')==='Theory'?'selected':''}>Theory</option><option ${existing?.type==='Practical'?'selected':''}>Practical</option></select></div>
-          </div>
+          <div class="form-group"><label>Type</label><select id="subjType"><option ${(existing?.type||'Theory')==='Theory'?'selected':''}>Theory</option><option ${existing?.type==='Practical'?'selected':''}>Practical</option></select></div>
           <div class="form-group"><label>Teacher (optional)</label><select id="subjTeacher"><option value="">-- Unassigned --</option>${teacherOptions}</select></div>
           <div style="display:flex;gap:8px;justify-content:flex-end">
             <button class="btn btn-ghost" onclick="closeSubjectModal()">Cancel</button>
@@ -95,7 +98,6 @@ async function saveSubject() {
   const body = {
     name,
     code: document.getElementById('subjCode').value.trim(),
-    credits: Number(document.getElementById('subjCredits').value) || undefined,
     type: document.getElementById('subjType').value,
     teacher: document.getElementById('subjTeacher').value || undefined,
     course: subjFilterCourse,

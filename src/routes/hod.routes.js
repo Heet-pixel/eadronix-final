@@ -15,7 +15,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { fail, ok } from '../utils/respond.js';
 import { hardDeleteCascade, hardDeleteManyCascade } from '../utils/hardDelete.js';
 import { storeDataUri } from '../utils/gridfs.js';
-import { createStudent, ensureUser, ensureEmailAvailable, live, logCoHodActivity, mapStudent, mapTeacher, normalizeSubjectPayload, syncSubjectSchedule, findConflictingSlot, resolveSubjectForSlot, timesOverlap, updateStudentAndSyncParent, validateMobileNumber, validateImageDataUri, findAttendanceTimeConflict, validatePdfDataUri, validateAttendanceDateIsNotInTheFuture, validateLectureDuration } from '../controllers/common.js';
+import { createStudent, ensureUser, ensureEmailAvailable, live, logCoHodActivity, mapStudent, mapTeacher, normalizeSubjectPayload, syncSubjectSchedule, resolveSubjectForSlot, timesOverlap, updateStudentAndSyncParent, validateMobileNumber, validateImageDataUri, findAttendanceTimeConflict, validatePdfDataUri, validateAttendanceDateIsNotInTheFuture, validateLectureDuration } from '../controllers/common.js';
 import { to12h, to24h, groupSchedule, groupByDay } from '../utils/scheduleUtils.js';
 import { streamAttendanceReportPdf, streamMarksReportPdf } from '../utils/pdfReport.js';
 
@@ -23,6 +23,64 @@ const router = Router();
 router.use(requireAuth, allowRoles('hod', 'co_hod'));
 
 const scope = req => ({ college: req.user.college, department: req.user.department, ...live });
+
+function normalizeLabRollRange(slot) {
+  const type = slot.type || 'Lecture';
+  const labRollStart = String(slot.labRollStart || slot.labStartRoll || slot.rollStart || '').trim();
+  const labRollEnd = String(slot.labRollEnd || slot.labEndRoll || slot.rollEnd || '').trim();
+  if (type !== 'Lab') return { labRollStart: '', labRollEnd: '' };
+  if (!labRollStart || !labRollEnd) {
+    const err = new Error('Lab slots require starting and ending student roll numbers.');
+    err.status = 400;
+    throw err;
+  }
+  return { labRollStart, labRollEnd };
+}
+
+function rollRangesOverlap(aStart, aEnd, bStart, bEnd) {
+  if (!aStart || !aEnd || !bStart || !bEnd) return true;
+  const values = [aStart, aEnd, bStart, bEnd].map(v => String(v).trim());
+  if (values.every(v => /^\d+$/.test(v))) {
+    const [as, ae, bs, be] = values.map(v => BigInt(v));
+    const aLow = as < ae ? as : ae;
+    const aHigh = as < ae ? ae : as;
+    const bLow = bs < be ? bs : be;
+    const bHigh = bs < be ? be : bs;
+    return aLow <= bHigh && bLow <= aHigh;
+  }
+  const cmp = (x, y) => x.localeCompare(y, undefined, { numeric: true });
+  const aLow = cmp(values[0], values[1]) <= 0 ? values[0] : values[1];
+  const aHigh = aLow === values[0] ? values[1] : values[0];
+  const bLow = cmp(values[2], values[3]) <= 0 ? values[2] : values[3];
+  const bHigh = bLow === values[2] ? values[3] : values[2];
+  return cmp(aLow, bHigh) <= 0 && cmp(bLow, aHigh) <= 0;
+}
+
+function scheduleSlotsConflict(a, b) {
+  if (!timesOverlap(a.startTime, a.endTime, b.startTime, b.endTime)) return false;
+  if (a.type === 'Lab' && b.type === 'Lab') {
+    return rollRangesOverlap(a.labRollStart, a.labRollEnd, b.labRollStart, b.labRollEnd);
+  }
+  return true;
+}
+
+async function ensureLabRollsExist({ college, department, course, semester, labRollStart, labRollEnd }) {
+  if (!labRollStart && !labRollEnd) return;
+  const docs = await Student.find({
+    college,
+    department,
+    isDeleted: false,
+    status: { $ne: 'Removed' },
+    $or: [{ course }, { courseName: course }],
+    $and: [{ $or: [{ semester: Number(semester) }, { sem: Number(semester) }] }],
+  }).select('roll rollNo rollNumber').lean();
+  const rolls = new Set(docs.flatMap(s => [s.roll, s.rollNo, s.rollNumber].filter(Boolean).map(v => String(v).trim())));
+  if (!rolls.has(String(labRollStart).trim()) || !rolls.has(String(labRollEnd).trim())) {
+    const err = new Error('Lab start and end roll numbers must be selected from existing students in this course and semester.');
+    err.status = 400;
+    throw err;
+  }
+}
 
 async function buildHodProfile(user) {
   const [studentCourses, teacherCourses, courseDocs, departmentDoc] = await Promise.all([
@@ -809,6 +867,17 @@ router.post('/schedule', asyncHandler(async (req, res) => {
     const startTime = s.startTime || to24h((s.time || '').split('–')[0].trim());
     const endTime = s.endTime || to24h(((s.time || '').split('–')[1] || '').trim());
 
+    let labRange;
+    try {
+      labRange = normalizeLabRollRange(s);
+      await ensureLabRollsExist({
+        college: req.user.college, department: req.user.department,
+        course, semester: semesterNum, ...labRange,
+      });
+    } catch (e) {
+      return fail(res, e.status || 400, `"${subject.name}" (${s.day}): ${e.message}`);
+    }
+
     const durationCheck = validateLectureDuration(startTime, endTime);
     if (!durationCheck.ok) return fail(res, 400, `"${subject.name}" (${s.day}): ${durationCheck.message}`);
 
@@ -826,16 +895,18 @@ router.post('/schedule', asyncHandler(async (req, res) => {
     const excludeIds = existingForThisClass.map(d => d._id);
     const dbConflict = await findConflictingSlotExcluding({
       college: req.user.college, department: req.user.department, course, semester: semesterNum,
-      day: s.day, startTime, endTime, teacher: teacherDoc?._id, excludeIds,
+      day: s.day, startTime, endTime, teacher: teacherDoc?._id, excludeIds, type: s.type || subject.type || 'Lecture', ...labRange,
     });
     if (dbConflict) return fail(res, 409, dbConflict.message);
 
     // Conflict check: against slots already accepted earlier in this same batch
+    const currentSlotForConflict = { startTime, endTime, type: s.type || subject.type || 'Lecture', ...labRange };
     const batchConflict = inBatchAccepted.find(a =>
-      a.day === s.day && timesOverlap(startTime, endTime, a.startTime, a.endTime) &&
-      (a.teacher ? String(a.teacher) === String(teacherDoc?._id) : false)
+      a.day === s.day &&
+      (scheduleSlotsConflict(currentSlotForConflict, a) ||
+        (a.teacher ? String(a.teacher) === String(teacherDoc?._id) && timesOverlap(startTime, endTime, a.startTime, a.endTime) : false))
     );
-    if (batchConflict) return fail(res, 409, `Teacher "${teacherDoc?.name}" has two overlapping lectures on ${s.day} in this timetable.`);
+    if (batchConflict) return fail(res, 409, `Overlapping slot found on ${s.day}. For labs, use different roll-number ranges for slots at the same time.`);
 
     const t12 = startTime ? `${to12h(startTime)}${endTime ? ' – ' + to12h(endTime) : ''}` : (s.time || '');
     const doc = {
@@ -843,6 +914,7 @@ router.post('/schedule', asyncHandler(async (req, res) => {
       subjectName: subject.name, subject: subject._id,
       teacherName: teacherDoc?.name || '', teacher: teacherDoc?._id || null,
       room: s.room || '', type: s.type || subject.type || 'Lecture',
+      labRollStart: labRange.labRollStart, labRollEnd: labRange.labRollEnd,
       course, semester: semesterNum,
       college: req.user.college, department: req.user.department, createdBy: req.user.id,
     };
@@ -890,9 +962,21 @@ router.post('/schedule/slot', asyncHandler(async (req, res) => {
   const teacherDoc = await User.findOne({ _id: teacher, college: req.user.college, department: req.user.department, role: { $in: ['teacher', 'hod', 'co_hod'] }, ...live }).select('name').lean();
   if (!teacherDoc) return fail(res, 400, 'Selected teacher was not found in your department.');
 
-  const conflict = await findConflictingSlot({
+  let labRange;
+  try {
+    labRange = normalizeLabRollRange({ ...req.body, type: type || subject.type || 'Lecture' });
+    await ensureLabRollsExist({
+      college: req.user.college, department: req.user.department,
+      course, semester, ...labRange,
+    });
+  } catch (e) {
+    return fail(res, e.status || 400, e.message);
+  }
+
+  const conflict = await findConflictingSlotExcluding({
     college: req.user.college, department: req.user.department, course, semester,
-    day, startTime, endTime, teacher: teacherDoc._id,
+    day, startTime, endTime, teacher: teacherDoc._id, excludeIds: [],
+    type: type || subject.type || 'Lecture', ...labRange,
   });
   if (conflict) return fail(res, 409, conflict.message);
 
@@ -902,6 +986,7 @@ router.post('/schedule/slot', asyncHandler(async (req, res) => {
     subject: subject._id, subjectName: subject.name,
     teacher: teacherDoc._id, teacherName: teacherDoc.name,
     room: room || '', type: type || subject.type || 'Lecture',
+    labRollStart: labRange.labRollStart, labRollEnd: labRange.labRollEnd,
     course, semester, division: division || '',
     college: req.user.college, department: req.user.department, createdBy: req.user.id,
   });
@@ -950,9 +1035,23 @@ router.put('/schedule/:id', asyncHandler(async (req, res) => {
     body.time = `${to12h(startTime || '')}${endTime ? ' – ' + to12h(endTime) : ''}`;
   }
 
-  const conflict = await findConflictingSlot({
+  try {
+    const labRange = normalizeLabRollRange({ ...existing.toObject(), ...body });
+    await ensureLabRollsExist({
+      college: req.user.college, department: req.user.department,
+      course, semester: semesterNum, ...labRange,
+    });
+    body.labRollStart = labRange.labRollStart;
+    body.labRollEnd = labRange.labRollEnd;
+  } catch (e) {
+    return fail(res, e.status || 400, e.message);
+  }
+
+  const conflict = await findConflictingSlotExcluding({
     college: req.user.college, department: req.user.department, course, semester: semesterNum,
-    day, startTime, endTime, teacher: teacherId, excludeId: existing._id,
+    day, startTime, endTime, teacher: teacherId, excludeIds: [existing._id],
+    type: body.type || existing.type || 'Lecture',
+    labRollStart: body.labRollStart, labRollEnd: body.labRollEnd,
   });
   if (conflict) return fail(res, 409, conflict.message);
 
@@ -961,15 +1060,15 @@ router.put('/schedule/:id', asyncHandler(async (req, res) => {
   ok(res, { schedule }, 'Schedule updated.');
 }));
 
-// Helper used only by the bulk /schedule save above: like findConflictingSlot, but
-// excludes a whole set of ids (the old slots for this course+sem being replaced)
-// instead of just one, since a bulk save wipes and re-inserts the whole class's day.
-async function findConflictingSlotExcluding({ college, department, course, semester, day, startTime, endTime, teacher, excludeIds }) {
+// Conflict helper with lab roll-range awareness. Bulk saves pass the old
+// course-semester slot ids here; single-slot updates pass only the slot being
+// edited; new slots pass an empty list.
+async function findConflictingSlotExcluding({ college, department, course, semester, day, startTime, endTime, teacher, excludeIds, type, labRollStart, labRollEnd }) {
   const baseFilter = { college, ...live, day, _id: { $nin: excludeIds } };
 
   const classSlots = await Schedule.find({ ...baseFilter, department, course, semester }).populate('teacher', 'name').lean();
   for (const slot of classSlots) {
-    if (timesOverlap(startTime, endTime, slot.startTime, slot.endTime)) {
+    if (scheduleSlotsConflict({ startTime, endTime, type, labRollStart, labRollEnd }, slot)) {
       return { message: `This class already has a lecture scheduled during this time by ${slot.teacher?.name || slot.teacherName || 'another teacher'}.` };
     }
   }
