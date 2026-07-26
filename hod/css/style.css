@@ -4381,8 +4381,8 @@ body {
 }
 
 .brand-logo{
-    width:42px;
-    height:42px;
+    width:40px;
+    height:40px;
     object-fit:contain;
     flex-shrink:0;
 }
