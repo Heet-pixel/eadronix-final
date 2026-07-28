@@ -4,13 +4,10 @@ export function to12h(t24) {
   try {
     if (!t24 || !t24.includes(':')) return t24 || '';
     let [h, m] = t24.split(':').map(Number);
-    if (h >= 1 && h < 7) h += 12;
     const p = h >= 12 ? 'PM' : 'AM';
     h = h % 12 || 12;
-    return `${h}:${String(m).padStart(2, '0')} ${p}`;
-  } catch {
-    return t24 || '';
-  }
+    return `${h}:${String(m).padStart(2,'0')} ${p}`;
+  } catch { return t24 || ''; }
 }
 
 export function to24h(t12) {
@@ -22,29 +19,15 @@ export function to24h(t12) {
     let h = parseInt(m[1]), min = m[2], p = m[3].toUpperCase();
     if (p === 'PM' && h !== 12) h += 12;
     if (p === 'AM' && h === 12) h = 0;
-    return `${String(h).padStart(2, '0')}:${min}`;
-  } catch {
-    return '';
-  }
-}
-
-function sortMinutes(t24) {
-  if (!t24 || !t24.includes(':')) return Number.MAX_SAFE_INTEGER;
-  let [h, m] = t24.split(':').map(Number);
-  if (Number.isNaN(h) || Number.isNaN(m)) return Number.MAX_SAFE_INTEGER;
-  if (h >= 1 && h < 7) h += 12;
-  return h * 60 + m;
-}
-
-function displayTime(startTime, endTime) {
-  return startTime ? `${to12h(startTime)}${endTime ? ' - ' + to12h(endTime) : ''}` : '';
+    return `${String(h).padStart(2,'0')}:${min}`;
+  } catch { return ''; }
 }
 
 // Group schedule docs into { course: { sem: { day: [slots] } } }
 export function groupSchedule(docs) {
   const out = {};
   for (const d of docs) {
-    if (!d.course) continue;
+    if (!d.course) continue; // no real course on this row — nothing to group it under
     const course = d.course;
     const sem = String(d.semester || 1);
     const day = d.day || 'Mon';
@@ -64,22 +47,15 @@ export function groupSchedule(docs) {
       labRollEnd: d.labRollEnd || '',
       startTime: d.startTime,
       endTime: d.endTime,
-      time: displayTime(d.startTime, d.endTime),
+      time: d.time || (d.startTime ? `${to12h(d.startTime)}${d.endTime ? ' – ' + to12h(d.endTime) : ''}` : '')
     });
-  }
-  for (const course of Object.keys(out)) {
-    for (const sem of Object.keys(out[course])) {
-      for (const day of Object.keys(out[course][sem])) {
-        out[course][sem][day].sort((a, b) => sortMinutes(a.startTime) - sortMinutes(b.startTime));
-      }
-    }
   }
   return out;
 }
 
 // Group schedule docs into { day: [slots] } for a specific course+sem
 export function groupByDay(docs) {
-  const out = { Mon: [], Tue: [], Wed: [], Thu: [], Fri: [], Sat: [] };
+  const out = { Mon:[], Tue:[], Wed:[], Thu:[], Fri:[], Sat:[] };
   for (const d of docs) {
     const day = d.day || 'Mon';
     if (!out[day]) out[day] = [];
@@ -95,14 +71,15 @@ export function groupByDay(docs) {
       labRollEnd: d.labRollEnd || '',
       startTime: d.startTime,
       endTime: d.endTime,
-      time: displayTime(d.startTime, d.endTime),
+      time: d.time || (d.startTime ? `${to12h(d.startTime)}${d.endTime ? ' – ' + to12h(d.endTime) : ''}` : ''),
       course: d.course,
       sem: d.semester,
-      semester: d.semester,
+      semester: d.semester
     });
   }
+  // Sort each day by startTime
   for (const day of Object.keys(out)) {
-    out[day].sort((a, b) => sortMinutes(a.startTime) - sortMinutes(b.startTime));
+    out[day].sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
   }
   return out;
 }

@@ -193,17 +193,17 @@ function renderDayView(course, sem, day) {
           <input type="time" id="sscEnd_${course}_${sem}_${day}_${idx}" value="${slot.endTime || ''}" onchange="updateSlot('${course}',${sem},'${day}',${idx},'endTime',this.value)" title="End time (auto-suggested from start + type, editable)">
         </div>
         <div class="ssc-info">
-          <select class="ssc-subj" ${isGeneralSlotType(slot.type) ? 'disabled' : ''} onchange="updateSlotSubject('${course}',${sem},'${day}',${idx},this.value)">
-            <option value="">${isGeneralSlotType(slot.type) ? slot.type : '-- Select subject (Admin list) --'}</option>
+          <select class="ssc-subj" onchange="updateSlotSubject('${course}',${sem},'${day}',${idx},this.value)">
+            <option value="">-- Select subject (Admin list) --</option>
             ${subjectChoices.map(s => `<option value="${s.id}" ${String(slot.subject || '') === String(s.id) || slot.subjectName === s.name ? 'selected' : ''}>${escHtml(s.name)}</option>`).join('')}
           </select>
-          <select class="ssc-teacher" ${isGeneralSlotType(slot.type) ? 'disabled' : ''} onchange="updateSlotTeacher('${course}',${sem},'${day}',${idx},this.value)">
-            <option value="">${isGeneralSlotType(slot.type) ? 'No teacher needed' : '-- Select teacher --'}</option>
+          <select class="ssc-teacher" onchange="updateSlotTeacher('${course}',${sem},'${day}',${idx},this.value)">
+            <option value="">-- Select teacher --</option>
             ${teacherChoices.map(t => `<option value="${t.id || t._id}" ${String(slot.teacherId || '') === String(t.id || t._id) ? 'selected' : ''}>${escHtml(t.name)}</option>`).join('')}
           </select>
           <input class="ssc-room" type="text" value="${escHtml(slot.room || '')}" placeholder="Room (optional)" onchange="updateSlot('${course}',${sem},'${day}',${idx},'room',this.value)">
           <select class="ssc-type" onchange="updateSlot('${course}',${sem},'${day}',${idx},'type',this.value); autoCalcExistingSlotEnd('${course}',${sem},'${day}',${idx}); renderDayView('${course}',${sem},'${day}')">
-            ${['Lecture','Lab','Tutorial','Break','Library'].map(t => `<option ${(slot.type || 'Lecture') === t ? 'selected' : ''}>${t}</option>`).join('')}
+            ${['Lecture','Lab','Tutorial'].map(t => `<option ${(slot.type || 'Lecture') === t ? 'selected' : ''}>${t}</option>`).join('')}
           </select>
           <div class="ssc-lab-range ${(slot.type || 'Lecture') === 'Lab' ? 'show' : ''}">
             <select onchange="updateSlot('${course}',${sem},'${day}',${idx},'labRollStart',this.value)">
@@ -241,10 +241,6 @@ function updateSlotTeacher(course, sem, day, idx, teacherId) {
 
 function escHtml(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-function isGeneralSlotType(type) {
-  return ['Break', 'Library'].includes(type);
-}
-
 function getRollChoices(course, sem) {
   return (typeof allStudents !== 'undefined' ? allStudents : [])
     .filter(s => s.course === course && String(s.sem || s.semester || 1) === String(sem) && (s.roll || s.rollNo || s.rollNumber))
@@ -269,15 +265,6 @@ function updateSlot(course, sem, day, idx, field, value) {
   const slot = scheduleData[course][sem][day][idx];
   if (slot) {
     slot[field] = value;
-    if (field === 'type' && isGeneralSlotType(value)) {
-      slot.subject = '';
-      slot.subjectName = value;
-      slot.teacherId = '';
-      slot.teacher = '';
-      slot.teacherName = '';
-      slot.labRollStart = '';
-      slot.labRollEnd = '';
-    }
     if (field === 'type' && value !== 'Lab') {
       slot.labRollStart = '';
       slot.labRollEnd = '';
@@ -373,8 +360,6 @@ function openAddSlotModal(course, sem) {
               <option ${defaultType === 'Lecture' ? 'selected' : ''}>Lecture</option>
               <option>Lab</option>
               <option>Tutorial</option>
-              <option>Break</option>
-              <option>Library</option>
             </select>
             <div style="font-size:11px;color:var(--muted);margin-top:4px">Lecture → end time auto-set 1 hr later · Lab → 2 hrs later · Tutorial → enter manually</div>
           </div>
@@ -405,11 +390,6 @@ function autoCalcSlotEnd() {
   if (computed) endEl.value = computed; // Tutorial: computed is '' → leave whatever the HOD already typed
   const rangeEl = document.getElementById('slotLabRange');
   if (rangeEl) rangeEl.style.display = typeEl.value === 'Lab' ? 'block' : 'none';
-  const isGeneral = isGeneralSlotType(typeEl.value);
-  const subjEl = document.getElementById('slotSubj');
-  const teacherEl = document.getElementById('slotTeacher');
-  if (subjEl) { subjEl.disabled = isGeneral; if (isGeneral) subjEl.value = ''; }
-  if (teacherEl) { teacherEl.disabled = isGeneral; if (isGeneral) teacherEl.value = ''; }
 }
 function closeAddSlotModal() { document.getElementById('addSlotOverlay')?.remove(); }
 function confirmAddSlot() {
@@ -423,9 +403,8 @@ function confirmAddSlot() {
   const type = document.getElementById('slotType').value;
   const labRollStart = document.getElementById('slotLabRollStart')?.value.trim() || '';
   const labRollEnd = document.getElementById('slotLabRollEnd')?.value.trim() || '';
-  const isGeneral = isGeneralSlotType(type);
-  if (!isGeneral && !subjectId) { showToast('Please select a subject from the Admin subject list.', 'error'); return; }
-  if (!isGeneral && !teacherId) { showToast('Please select a teacher.', 'error'); return; }
+  if (!subjectId) { showToast('Please select a subject from the Admin subject list.', 'error'); return; }
+  if (!teacherId) { showToast('Please select a teacher.', 'error'); return; }
   if (type === 'Lab' && (!labRollStart || !labRollEnd)) { showToast('Please enter starting and ending roll numbers for this lab.', 'error'); return; }
   if (!_isLectureDurationValid(startTime, endTime)) { showToast('A lecture must be at least 30 minutes long.', 'error'); return; }
   const subjChoice = getSubjObjects(course, sem).find(s => String(s.id) === String(subjectId));
@@ -434,8 +413,8 @@ function confirmAddSlot() {
   if (!scheduleData[course][sem]) scheduleData[course][sem] = {};
   if (!scheduleData[course][sem][day]) scheduleData[course][sem][day] = [];
   scheduleData[course][sem][day].push({
-    subject: isGeneral ? '' : subjectId, subjectName: isGeneral ? type : (subjChoice ? subjChoice.name : ''),
-    teacherId: isGeneral ? '' : teacherId, teacher: isGeneral ? '' : (teacherChoice ? teacherChoice.name : ''), teacherName: isGeneral ? '' : (teacherChoice ? teacherChoice.name : ''),
+    subject: subjectId, subjectName: subjChoice ? subjChoice.name : '',
+    teacherId: teacherId, teacher: teacherChoice ? teacherChoice.name : '', teacherName: teacherChoice ? teacherChoice.name : '',
     startTime, endTime, room, type, labRollStart, labRollEnd,
     time: `${to12h(startTime)}${endTime ? ' – ' + to12h(endTime) : ''}`
   });
@@ -462,17 +441,16 @@ async function saveFullSchedule(course, sem) {
     const daySlots = dayMap[day] || [];
     daySlots.forEach(s => {
       if (validationError) return;
-      const isGeneral = isGeneralSlotType(s.type);
       if (!s.subject && !s.subjectName) return;
       if ((s.type || 'Lecture') === 'Lab' && (!s.labRollStart || !s.labRollEnd)) {
         validationError = `Please enter starting and ending roll numbers for the lab on ${day}.`;
         return;
       }
       slots.push({
-        day, subjectId: isGeneral ? '' : (s.subject || ''), subjectName: s.subjectName || (isGeneral ? s.type : ''),
-        teacher: isGeneral ? '' : (s.teacherId || ''), teacherName: isGeneral ? '' : (s.teacherName || ''),
+        day, subjectId: s.subject || '', subjectName: s.subjectName || '',
+        teacher: s.teacherId || '', teacherName: s.teacherName || '',
         startTime: s.startTime || '', endTime: s.endTime || '', room: s.room || '', type: s.type || 'Lecture', time: s.time || '',
-        labRollStart: isGeneral ? '' : (s.labRollStart || ''), labRollEnd: isGeneral ? '' : (s.labRollEnd || '')
+        labRollStart: s.labRollStart || '', labRollEnd: s.labRollEnd || ''
       });
     });
   }

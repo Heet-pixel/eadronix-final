@@ -5,7 +5,7 @@ import { requireAuth, allowRoles } from '../middleware/auth.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { fail, ok } from '../utils/respond.js';
 import { mapStudent, studentBundle, validateImageDataUri } from '../controllers/common.js';
-import { groupByDay, to12h } from '../utils/scheduleUtils.js';
+import { groupByDay } from '../utils/scheduleUtils.js';
 import { streamSubjectAttendancePdf } from '../utils/pdfReport.js';
 import { storeDataUri } from '../utils/gridfs.js';
 
@@ -28,18 +28,6 @@ function rollInRange(roll, start, end) {
   const high = low === from ? to : from;
   return value.localeCompare(low, undefined, { numeric: true }) >= 0 &&
     value.localeCompare(high, undefined, { numeric: true }) <= 0;
-}
-
-function timetableSortMinutes(t24) {
-  if (!t24 || !t24.includes(':')) return Number.MAX_SAFE_INTEGER;
-  let [h, m] = t24.split(':').map(Number);
-  if (Number.isNaN(h) || Number.isNaN(m)) return Number.MAX_SAFE_INTEGER;
-  if (h >= 1 && h < 7) h += 12;
-  return h * 60 + m;
-}
-
-function timetableDisplayTime(startTime, endTime) {
-  return startTime ? `${to12h(startTime)}${endTime ? ' - ' + to12h(endTime) : ''}` : '';
 }
 
 async function currentStudent(req, res) {
@@ -98,8 +86,8 @@ router.get('/dashboard', asyncHandler(async (req, res) => {
   const timetableToday = data.timetable
     .filter(t => t.type !== 'Lab' || rollInRange(studentRoll, t.labRollStart, t.labRollEnd))
     .filter(t => t.day === todayDayName)
-    .sort((a, b) => timetableSortMinutes(a.startTime) - timetableSortMinutes(b.startTime))
-    .map(t => ({ time: timetableDisplayTime(t.startTime, t.endTime), subject: t.subjectName, room: t.room, type: t.type }));
+    .sort((a, b) => String(a.startTime || '').localeCompare(String(b.startTime || '')))
+    .map(t => ({ time: t.time || `${t.startTime || ''}${t.endTime ? ' - ' + t.endTime : ''}`, subject: t.subjectName, room: t.room, type: t.type }));
 
   // Pending marks — subjects this student has no mark record for yet.
   const markedSubjectIds = new Set(data.marks.map(m => String(m.subject?._id || m.subject || '')));

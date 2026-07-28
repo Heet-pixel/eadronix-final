@@ -64,19 +64,6 @@ function scheduleSlotsConflict(a, b) {
   return true;
 }
 
-function teacherSlotsConflict(a, b) {
-  if (!timesOverlap(a.startTime, a.endTime, b.startTime, b.endTime)) return false;
-  if (a.type === 'Lab' && b.type === 'Lab' &&
-      !rollRangesOverlap(a.labRollStart, a.labRollEnd, b.labRollStart, b.labRollEnd)) {
-    return false;
-  }
-  return true;
-}
-
-function isGeneralScheduleSlot(slot) {
-  return ['Break', 'Library'].includes(slot.type || slot.subjectName);
-}
-
 async function ensureLabRollsExist({ college, department, course, semester, labRollStart, labRollEnd }) {
   if (!labRollStart && !labRollEnd) return;
   const docs = await Student.find({
@@ -860,24 +847,21 @@ router.post('/schedule', asyncHandler(async (req, res) => {
   if (!Array.isArray(slots)) return fail(res, 400, 'slots must be an array.');
 
   const semesterNum = Number(semester);
-  const usableSlots = slots.filter(s => s.day && (s.subjectId || s.subjectName || isGeneralScheduleSlot(s)));
+  const usableSlots = slots.filter(s => s.day && (s.subjectId || s.subjectName));
 
   // Resolve every slot's subject against the master list and its teacher, and
   // check for conflicts BEFORE deleting/writing anything — validate first, save second.
   const resolved = [];
   const inBatchAccepted = []; // conflict-check accumulator for slots within this same save
   for (const s of usableSlots) {
-    const isGeneral = isGeneralScheduleSlot(s);
-    let subject = null;
-    if (!isGeneral) {
-      try {
-        subject = await resolveSubjectForSlot({
-          college: req.user.college, department: req.user.department,
-          course, semester: semesterNum, subjectId: s.subjectId, subjectName: s.subjectName,
-        });
-      } catch (e) {
-        return fail(res, e.status || 400, e.message);
-      }
+    let subject;
+    try {
+      subject = await resolveSubjectForSlot({
+        college: req.user.college, department: req.user.department,
+        course, semester: semesterNum, subjectId: s.subjectId, subjectName: s.subjectName,
+      });
+    } catch (e) {
+      return fail(res, e.status || 400, e.message);
     }
 
     const startTime = s.startTime || to24h((s.time || '').split('–')[0].trim());
@@ -895,16 +879,14 @@ router.post('/schedule', asyncHandler(async (req, res) => {
     }
 
     const durationCheck = validateLectureDuration(startTime, endTime);
-    if (!durationCheck.ok) return fail(res, 400, `"${isGeneral ? s.type : subject.name}" (${s.day}): ${durationCheck.message}`);
+    if (!durationCheck.ok) return fail(res, 400, `"${subject.name}" (${s.day}): ${durationCheck.message}`);
 
     let teacherDoc = null;
-    if (!isGeneral && !s.teacher) {
+    if (!s.teacher) {
       return fail(res, 400, `Please select a teacher for "${subject.name}" (${s.day}${startTime ? ' ' + startTime : ''}) — a lecture with no teacher assigned would never show up on anyone's timetable.`);
     }
-    if (!isGeneral) {
-      teacherDoc = await User.findOne({ _id: s.teacher, college: req.user.college, department: req.user.department, role: { $in: ['teacher', 'hod', 'co_hod'] }, ...live }).select('name').lean();
-      if (!teacherDoc) return fail(res, 400, `Selected teacher for "${subject.name}" (${s.day} ${startTime}) was not found in your department.`);
-    }
+    teacherDoc = await User.findOne({ _id: s.teacher, college: req.user.college, department: req.user.department, role: { $in: ['teacher', 'hod', 'co_hod'] }, ...live }).select('name').lean();
+    if (!teacherDoc) return fail(res, 400, `Selected teacher for "${subject.name}" (${s.day} ${startTime}) was not found in your department.`);
 
     // Conflict check: DB (excluding slots we're about to replace for this course+sem)
     const existingForThisClass = await Schedule.find({
@@ -913,26 +895,25 @@ router.post('/schedule', asyncHandler(async (req, res) => {
     const excludeIds = existingForThisClass.map(d => d._id);
     const dbConflict = await findConflictingSlotExcluding({
       college: req.user.college, department: req.user.department, course, semester: semesterNum,
-      day: s.day, startTime, endTime, teacher: teacherDoc?._id, excludeIds, type: s.type || subject?.type || 'Lecture', ...labRange,
+      day: s.day, startTime, endTime, teacher: teacherDoc?._id, excludeIds, type: s.type || subject.type || 'Lecture', ...labRange,
     });
     if (dbConflict) return fail(res, 409, dbConflict.message);
 
     // Conflict check: against slots already accepted earlier in this same batch
-    const currentSlotForConflict = { startTime, endTime, type: s.type || subject?.type || 'Lecture', ...labRange };
+    const currentSlotForConflict = { startTime, endTime, type: s.type || subject.type || 'Lecture', ...labRange };
     const batchConflict = inBatchAccepted.find(a =>
       a.day === s.day &&
       (scheduleSlotsConflict(currentSlotForConflict, a) ||
-        (a.teacher ? String(a.teacher) === String(teacherDoc?._id) && teacherSlotsConflict(currentSlotForConflict, a) : false))
+        (a.teacher ? String(a.teacher) === String(teacherDoc?._id) && timesOverlap(startTime, endTime, a.startTime, a.endTime) : false))
     );
     if (batchConflict) return fail(res, 409, `Overlapping slot found on ${s.day}. For labs, use different roll-number ranges for slots at the same time.`);
 
     const t12 = startTime ? `${to12h(startTime)}${endTime ? ' – ' + to12h(endTime) : ''}` : (s.time || '');
     const doc = {
       day: s.day, startTime, endTime, time: t12,
-      subjectName: isGeneral ? (s.type || s.subjectName) : subject.name,
-      subject: isGeneral ? null : subject._id,
+      subjectName: subject.name, subject: subject._id,
       teacherName: teacherDoc?.name || '', teacher: teacherDoc?._id || null,
-      room: s.room || '', type: isGeneral ? (s.type || s.subjectName) : (s.type || subject.type || 'Lecture'),
+      room: s.room || '', type: s.type || subject.type || 'Lecture',
       labRollStart: labRange.labRollStart, labRollEnd: labRange.labRollEnd,
       course, semester: semesterNum,
       college: req.user.college, department: req.user.department, createdBy: req.user.id,
@@ -1094,7 +1075,7 @@ async function findConflictingSlotExcluding({ college, department, course, semes
   if (teacher) {
     const teacherSlots = await Schedule.find({ ...baseFilter, teacher }).lean();
     for (const slot of teacherSlots) {
-      if (teacherSlotsConflict({ startTime, endTime, type, labRollStart, labRollEnd }, slot)) {
+      if (timesOverlap(startTime, endTime, slot.startTime, slot.endTime)) {
         return { message: `This teacher already has a lecture scheduled during this time (${slot.course || ''} Sem ${slot.semester || ''}).` };
       }
     }
