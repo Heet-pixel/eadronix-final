@@ -744,7 +744,18 @@ export async function studentBundle(student) {
         { $or: [{ targetRole: 'all' }, { targetRole: { $exists: false } }, { targetRole: 'student' }] },
       ],
     }).sort({ createdAt: -1 }).populate('author', 'name').populate('createdBy', 'name').lean(),
-    Mark.find({ student: student._id || student.id, ...live })
+    Mark.find({
+      student: student._id || student.id,
+      ...live,
+      // A student sees a mark once the teacher/CC has published it, OR
+      // immediately if it has their own self-uploaded marksheet screenshot
+      // attached (that's their own submission, not a result being withheld).
+      // Keyed on `image` presence (only ever set by the student's own
+      // upload route) rather than `enteredBy`, so a screenshot uploaded
+      // alongside an existing-but-unpublished teacher-entered number can't
+      // accidentally leak that number early.
+      $or: [{ published: true }, { image: { $exists: true, $nin: ['', null] } }],
+    })
       .populate('subject', 'name code')
       .lean(),
     Schedule.find(classFilter).lean(),

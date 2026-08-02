@@ -950,6 +950,100 @@ textarea {
 .exam-row__score {
   font-weight: 800;
 }
+.exam-row__proof {
+  margin-left: 8px;
+  text-decoration: none;
+  font-size: 14px;
+}
+.exam-row--pending {
+  background: var(--clr-warning-bg);
+}
+.exam-row__score--pending {
+  color: var(--clr-warning);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+/* ── Marks: self-upload button + modal ──────────────────────────── */
+.marks-upload-btn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border: 1px dashed var(--clr-accent-br);
+  background: var(--clr-accent-bg);
+  color: var(--clr-accent);
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.marks-upload-btn:hover {
+  background: var(--clr-accent-br);
+}
+.marks-upload-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 12, 24, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+.marks-upload-modal {
+  background: var(--clr-surface);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: var(--shadow-md);
+}
+.marks-upload-modal__title {
+  font-size: 15px;
+  font-weight: 800;
+  margin-bottom: 14px;
+}
+.marks-upload-modal__label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--clr-text2);
+  margin: 10px 0 6px;
+}
+.marks-upload-modal__input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-sm);
+  background: var(--clr-surface2);
+  color: var(--clr-text);
+  font-family: var(--font);
+  font-size: 13px;
+}
+.marks-upload-modal__actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+.marks-upload-modal__cancel,
+.marks-upload-modal__submit {
+  flex: 1;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+}
+.marks-upload-modal__cancel {
+  background: var(--clr-surface2);
+  color: var(--clr-text2);
+}
+.marks-upload-modal__submit {
+  background: var(--clr-accent);
+  color: #fff;
+}
 
 /* ── Timetable ───────────────────────────────────────────────── */
 .day-chips {

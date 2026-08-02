@@ -270,71 +270,161 @@ async function submitAtt() {
 // Attendance History (spec item 4) — list every lecture this teacher
 // has submitted, view one, and edit it IN PLACE (no new lecture created).
 // ═══════════════════════════════════════════════════════════
+// Attendance History (spec item 4, redesigned) — list every lecture this
+// teacher has submitted, view one, and edit it IN PLACE (no new lecture
+// created). Restyled to match the same stat-bar visual language used in the
+// live "Mark Attendance" flow (Step 3/4) instead of a plain text badge, and
+// editing now goes through the same mark → confirm → upload rhythm as a
+// fresh submission, rather than a single flat toggle list with one Save.
+//
+// Class Coordinators (see currentTeacher.ccAssignments, populated from
+// hod/js/cc.js's appointments) get an extra "View as Class Coordinator"
+// switcher here: picking one of their CC semesters shows EVERY teacher's
+// lectures for that class, not just their own, and they can edit any of
+// them — the same power an HOD has over that semester's attendance.
+// ═══════════════════════════════════════════════════════════
 const AttHistory = {
+  _mode: 'mine',       // 'mine' | 'cc'
+  _ccCourse: '',
+  _ccSem: 0,
+  _sessions: [],
+  _sessionKey: null,
+  _records: [],
+  _meta: null,
+  _phase: 'mark',      // within the session editor: 'mark' | 'confirm'
+
   async open() {
     document.getElementById('attHistoryOverlay').classList.add('open');
-    const body = document.getElementById('attHistoryBody');
-    body.innerHTML = 'Loading…';
-    try {
-      const d = await TAPI.getAttHistory();
-      if (!d.success) throw new Error(d.message || 'Failed to load history');
-      this._renderList(d.sessions || []);
-    } catch (e) {
-      body.innerHTML = `<p style="color:var(--red)">${e.message}</p>`;
-    }
+    this._mode = 'mine'; this._ccCourse = ''; this._ccSem = 0;
+    this._renderShell();
+    await this._loadList();
   },
 
   close() { document.getElementById('attHistoryOverlay').classList.remove('open'); },
   closeSession() { document.getElementById('attSessionOverlay').classList.remove('open'); },
 
-  _renderList(sessions) {
+  // Controls (CC switcher) + list live in separate containers so switching
+  // class doesn't have to rebuild the switcher itself.
+  _renderShell() {
     const body = document.getElementById('attHistoryBody');
-    if (!sessions.length) {
-      body.innerHTML = `<div class="empty-state" style="padding:32px 20px"><div class="e-icon">🕘</div><div class="e-txt">No attendance submitted yet</div></div>`;
+    const ccOptions = (currentTeacher.ccAssignments || []);
+    body.innerHTML = `
+      ${ccOptions.length ? `
+        <div class="att-hist-switcher">
+          <button class="ahs-btn ${this._mode === 'mine' ? 'active' : ''}" onclick="AttHistory.switchMode('mine')">
+            🙋 My Lectures
+          </button>
+          ${ccOptions.map(a => `
+            <button class="ahs-btn cc ${this._mode === 'cc' && this._ccCourse === a.course && this._ccSem === a.semester ? 'active' : ''}"
+              onclick="AttHistory.switchMode('cc', '${a.course}', ${a.semester})">
+              👑 ${a.course} Sem ${a.semester} (as Coordinator)
+            </button>`).join('')}
+        </div>` : ''}
+      <div id="attHistoryList">Loading…</div>
+    `;
+  },
+
+  async switchMode(mode, course, sem) {
+    this._mode = mode;
+    this._ccCourse = course || '';
+    this._ccSem = sem || 0;
+    this._renderShell();
+    await this._loadList();
+  },
+
+  async _loadList() {
+    const listEl = document.getElementById('attHistoryList');
+    listEl.innerHTML = 'Loading…';
+    try {
+      const q = this._mode === 'cc'
+        ? `course=${encodeURIComponent(this._ccCourse)}&semester=${this._ccSem}`
+        : '';
+      const d = await TAPI.getAttHistory(q);
+      if (!d.success) throw new Error(d.message || 'Failed to load history');
+      this._sessions = d.sessions || [];
+      this._renderList();
+    } catch (e) {
+      listEl.innerHTML = `<p style="color:var(--red)">${e.message}</p>`;
+    }
+  },
+
+  _renderList() {
+    const listEl = document.getElementById('attHistoryList');
+    if (!this._sessions.length) {
+      listEl.innerHTML = `<div class="empty-state" style="padding:32px 20px"><div class="e-icon">🕘</div><div class="e-txt">No attendance submitted yet</div></div>`;
       return;
     }
-    body.innerHTML = sessions.map(s => `
-      <div class="sched-card" style="cursor:pointer" onclick="AttHistory.openSession('${s.sessionKey}')">
+    listEl.innerHTML = this._sessions.map(s => {
+      const pct = s.total > 0 ? Math.round(s.present / s.total * 100) : 0;
+      return `
+      <div class="sched-card att-hist-card" onclick="AttHistory.openSession('${s.sessionKey}')">
         <div class="sched-time-badge">
           <div class="stb-time">${UI.fmt(s.date)}</div>
           <div class="stb-room">${s.time || s.type || ''}</div>
         </div>
-        <div class="sched-info">
+        <div class="sched-info" style="flex:1">
           <div class="sched-sub">${s.subjectName}</div>
-          <div class="sched-meta">${s.course} · Sem ${s.semester}${s.division ? ' · ' + s.division : ''}</div>
-          <span class="type-badge">✅ ${s.present} &nbsp; ❌ ${s.absent}</span>
+          <div class="sched-meta">
+            ${s.course} · Sem ${s.semester}${s.division ? ' · ' + s.division : ''}
+            ${this._mode === 'cc' && s.teacherName ? ` · 👤 ${s.teacherName}` : ''}
+          </div>
+          <div class="att-ctr-row">
+            <div class="att-ctr sm"><div class="ac-val" style="color:var(--accent)">${s.total}</div><div class="ac-lbl">Total</div></div>
+            <div class="att-ctr sm"><div class="ac-val" style="color:var(--green)">${s.present}</div><div class="ac-lbl">Present</div></div>
+            <div class="att-ctr sm"><div class="ac-val" style="color:var(--red)">${s.absent}</div><div class="ac-lbl">Absent</div></div>
+            <div class="att-ctr sm"><div class="ac-val" style="color:var(--accent)">${pct}%</div><div class="ac-lbl">% Pres.</div></div>
+          </div>
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   },
 
   async openSession(sessionKey) {
     document.getElementById('attSessionOverlay').classList.add('open');
     const body = document.getElementById('attSessionBody');
     body.innerHTML = 'Loading…';
+    this._phase = 'mark';
     try {
       const d = await TAPI.getAttSession(sessionKey);
       if (!d.success) throw new Error(d.message || 'Failed to load lecture');
       this._sessionKey = sessionKey;
       this._records = d.records;
+      this._meta = d.meta;
       document.getElementById('attSessionTitle').textContent = `${d.meta.subjectName} — ${d.meta.course} Sem ${d.meta.semester}`;
-      this._renderSession(d);
+      this._renderMarkPhase();
     } catch (e) {
       body.innerHTML = `<p style="color:var(--red)">${e.message}</p>`;
     }
   },
 
-  _renderSession(d) {
+  _tallies() {
+    const total = this._records.length;
+    const present = this._records.filter(r => r.status !== 'absent').length;
+    const absent = total - present;
+    const pct = total > 0 ? Math.round(present / total * 100) : 0;
+    return { total, present, absent, pct };
+  },
+
+  // Step "Mark Students" — same toggle-list, but now with a live stat bar
+  // on top (matching #acTotal/#acPresent/#acAbsent/#acPct in the main
+  // marking grid) instead of jumping straight to a bare Save button.
+  _renderMarkPhase() {
+    this._phase = 'mark';
     const body = document.getElementById('attSessionBody');
-    const uploadedAt = d.meta.uploadedAt
-      ? UI.fmtDateTime(d.meta.uploadedAt)
-      : null;
+    const t = this._tallies();
     body.innerHTML = `
       <p style="color:var(--muted,#888);font-size:13px;margin-bottom:10px">
-        ${d.meta.day} ${d.meta.time ? '· ' + d.meta.time : ''}${d.meta.division ? ' · Division ' + d.meta.division : ''} —
+        ${this._meta.day} ${this._meta.time ? '· ' + this._meta.time : ''}${this._meta.division ? ' · Division ' + this._meta.division : ''} —
         editing here updates this same lecture, it does not create a new one.
       </p>
-      <div id="attSessionSeats" style="display:flex;flex-direction:column;gap:6px">
-        ${d.records.map((r, i) => `
+      <div class="att-meta-bar" id="attSessionStatBar">
+        <div class="att-ctr"><div class="ac-val" id="ahTotal" style="color:var(--accent)">${t.total}</div><div class="ac-lbl">Total</div></div>
+        <div class="att-ctr"><div class="ac-val" id="ahPresent" style="color:var(--green)">${t.present}</div><div class="ac-lbl">Present</div></div>
+        <div class="att-ctr"><div class="ac-val" id="ahAbsent" style="color:var(--red)">${t.absent}</div><div class="ac-lbl">Absent</div></div>
+        <div class="att-ctr"><div class="ac-val" id="ahPct" style="color:var(--accent)">${t.pct}%</div><div class="ac-lbl">% Pres.</div></div>
+      </div>
+      <div id="attSessionSeats" style="display:flex;flex-direction:column;gap:6px;margin-top:10px">
+        ${this._records.map((r, i) => `
           <div class="seat${r.status === 'absent' ? ' absent' : ''}" data-idx="${i}"
                style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:10px 12px;cursor:pointer"
                title="Tap to toggle present/absent" onclick="AttHistory.toggleStatus(${i})">
@@ -342,8 +432,9 @@ const AttHistory = {
             <b>${r.status === 'absent' ? 'Absent' : 'Present'}</b>
           </div>`).join('')}
       </div>
-      <button class="btn btn-primary" style="margin-top:14px;width:100%" onclick="AttHistory.save()">Save Changes</button>
-      ${uploadedAt ? `<div style="font-size:11px;color:var(--muted,#888);margin-top:10px;text-align:left">Lecture date: ${UI.fmt(d.meta.date)} · Uploaded ${uploadedAt}</div>` : ''}
+      <div class="btn-row" style="margin-top:14px">
+        <button class="btn btn-accent" onclick="AttHistory.goToConfirm()">📚 Review Changes</button>
+      </div>
     `;
   },
 
@@ -356,6 +447,35 @@ const AttHistory = {
       el.classList.toggle('absent', r.status === 'absent');
       el.querySelector('b').textContent = r.status === 'absent' ? 'Absent' : 'Present';
     }
+    const t = this._tallies();
+    document.getElementById('ahTotal').textContent = t.total;
+    document.getElementById('ahPresent').textContent = t.present;
+    document.getElementById('ahAbsent').textContent = t.absent;
+    document.getElementById('ahPct').textContent = t.pct + '%';
+  },
+
+  // Step "Confirm" — the actual save ("upload") only happens from here,
+  // mirroring the main mark-attendance flow's Step 4.
+  goToConfirm() {
+    this._phase = 'confirm';
+    const body = document.getElementById('attSessionBody');
+    const t = this._tallies();
+    body.innerHTML = `
+      <div class="conf-panel" style="display:block">
+        <div style="font-size:15px;font-weight:800;color:var(--accent);margin-bottom:6px">✅ Confirm Changes</div>
+        <div class="conf-nums">
+          <div class="cn-item"><div class="cn-v" style="color:var(--accent)">${t.total}</div><div class="cn-l">Total</div></div>
+          <div class="cn-item"><div class="cn-v" style="color:var(--green)">${t.present}</div><div class="cn-l">Present</div></div>
+          <div class="cn-item"><div class="cn-v" style="color:var(--red)">${t.absent}</div><div class="cn-l">Absent</div></div>
+          <div class="cn-item"><div class="cn-v" style="color:var(--accent)">${t.pct}%</div><div class="cn-l">% Pres.</div></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-success" onclick="AttHistory.save()">📤 Upload Changes</button>
+          <button class="btn btn-ghost" onclick="AttHistory._renderMarkPhase()" style="max-width:160px">← Back to Marking</button>
+        </div>
+        ${this._meta.uploadedAt ? `<div style="font-size:11px;color:var(--muted,#888);margin-top:10px;text-align:left">Lecture date: ${UI.fmt(this._meta.date)} · Originally uploaded ${UI.fmtDateTime(this._meta.uploadedAt)}</div>` : ''}
+      </div>
+    `;
   },
 
   async save() {
@@ -366,7 +486,7 @@ const AttHistory = {
       if (!d.success) throw new Error(d.message || 'Failed to save');
       showToast(d.message || 'Attendance updated.');
       this.closeSession();
-      this.open(); // refresh the list (counts change) 
+      this._loadList(); // refresh the list (counts change) — keeps chosen My/CC mode
     } catch (e) {
       showToast(e.message || 'Failed to save changes.', 'error');
     }

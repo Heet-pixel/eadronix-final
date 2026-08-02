@@ -113,4 +113,13 @@ const TAPI = {
   getProfile:       ()    => get('/teacher/profile'),
   updateProfile:    (b)   => put('/teacher/profile', b),
   uploadPhoto:      (uri) => post('/teacher/profile/photo', { image: uri }),
+
+  // ── Marks (Add Marks page) ──
+  // getMyClasses() (above) already gives {course, semesters[]} for classes
+  // this teacher directly teaches; CC semesters come from currentTeacher.ccAssignments.
+  getMarksAccess:  (course, semester) => get(`/teacher/marks/access?course=${encodeURIComponent(course)}&semester=${semester}`),
+  getMarksGrid:    (course, semester, examType) => get(`/teacher/marks/grid?course=${encodeURIComponent(course)}&semester=${semester}&examType=${encodeURIComponent(examType)}`),
+  saveMarksGrid:   (records) => post('/teacher/marks/grid-upsert', { records }),
+  publishMarks:    (course, semester, examType, publish, subjectIds) =>
+    salFetch('PATCH', '/teacher/marks/publish', { course, semester, examType, publish, subjectIds }),
 };

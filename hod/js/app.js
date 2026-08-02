@@ -217,7 +217,7 @@ function showSection(id) {
     teachers: loadTeachersSection,
     markattendance: loadMarkAttendance,
     schedule: loadSchedule,
-    marksupload: loadMarksUpload,
+    marksupload: () => { loadMarksUpload(); renderCCSheetPanel(); },
     reports: loadReports,
     announcement: loadAnnouncements,
     cc: loadCCSection,

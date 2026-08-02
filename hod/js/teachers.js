@@ -96,7 +96,13 @@ function renderAllTeacherCards() {
 }
 function renderTeacherList() {
   let base = allTeachers.filter((t) => t.course === activeTchrCourse);
-  let q = (window.tchrListSearch || "").toLowerCase();
+  // NOTE: this must NOT be named the same as the <input id="tchrListSearch">
+  // below. Browsers auto-expose any element with an `id` as a same-named
+  // property on `window`, so `window.tchrListSearch` would resolve to the
+  // <input> DOM element itself (not a string) before anything was ever
+  // typed — causing `.toLowerCase()` to be called on the element and crash
+  // with "(window.tchrListSearch || "").toLowerCase is not a function".
+  let q = (window._tchrListSearchQuery || "").toLowerCase();
   let data = q
     ? base.filter(
         (t) =>
@@ -113,8 +119,8 @@ function renderTeacherList() {
   </div>
   <div class="search-bar"><span>🔍</span>
     <input type="text" id="tchrListSearch" placeholder="Search teacher by name or subject¦" value="${q}"
-      oninput="window.tchrListSearch=this.value;renderTeacherList()">
-    ${q ? `<span onclick="window.tchrListSearch='';renderTeacherList()" style="cursor:pointer;color:var(--danger);" title="Clear">✕</span>` : ""}
+      oninput="window._tchrListSearchQuery=this.value;renderTeacherList()">
+    ${q ? `<span onclick="window._tchrListSearchQuery='';renderTeacherList()" style="cursor:pointer;color:var(--danger);" title="Clear">✕</span>` : ""}
   </div>
   <div style="font-size:12.5px;color:var(--text2);margin-bottom:10px;font-weight:600;">
     Showing <b style="color:var(--accent)">${data.length}</b> of ${base.length} teachers

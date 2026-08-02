@@ -65,6 +65,14 @@ const publicUser = (u) => ({
   firstLogin: u.firstLogin,
   designation: u.designation,
   phone:      u.phone,
+  course:     u.course,
+  // Class Coordinator appointments (HOD-assigned, see hod/js/cc.js) — lets
+  // the teacher portal show the full-semester marks grid instead of just
+  // the teacher's own subject when they're CC for that course+semester.
+  ccAssignments: (u.ccAssignments || []).map((a) => ({
+    course: a.course,
+    semester: a.semester,
+  })),
 });
 
 /**

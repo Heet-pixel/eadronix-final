@@ -83,6 +83,10 @@ const API = (() => {
 
     // Internal marks / exam results
     marks:         ()         => GET('/student/marks'),
+    // Self-upload a screenshot of your own marksheet for a subject+exam —
+    // an alternative to waiting for the teacher/CC to type in a number.
+    uploadMarkImage: (subjectId, examType, dataUri) =>
+      POST('/student/marks/upload-image', { subjectId, examType, image: dataUri }),
 
     // Timetable / schedule
     timetable:     ()         => GET('/student/timetable'),

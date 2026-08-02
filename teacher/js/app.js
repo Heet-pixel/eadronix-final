@@ -10,6 +10,11 @@ let currentTeacher = {
   timetable: {},
   isClassTeacher: false,
   classTeacherOf: null,
+  // Real Class Coordinator data (see hod/js/cc.js for how HOD assigns this).
+  // NOTE: isClassTeacher/classTeacherOf above are legacy fields the backend
+  // never actually populates — they'll always read false/null. ccAssignments
+  // is the real, working mechanism; used by teacher/js/marks.js.
+  ccAssignments: [],
 };
 
 // ─── State shared across modules ───
@@ -59,6 +64,8 @@ async function init() {
       currentTeacher.timetable = u.timetable || {};
       currentTeacher.isClassTeacher = u.isClassTeacher || false;
       currentTeacher.classTeacherOf = u.classTeacherOf || null;
+      currentTeacher.ccAssignments = Array.isArray(u.ccAssignments) ? u.ccAssignments : [];
+      currentTeacher.course = u.course || "";
     }
   } catch (_) {
     // Fallback — use whatever SAL_USER has (set by auth.js)

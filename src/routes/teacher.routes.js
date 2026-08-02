@@ -313,8 +313,13 @@ router.get(
       Subject.find({ ...scope(req), teacher: req.user.id }).lean(),
     ]);
     const allAttendance = await Attendance.find({
-      teacher: req.user.id,
-      ...live,
+      ...scope(req),
+      // NOTE: previously filtered to `teacher: req.user.id` — meaning a
+      // teacher browsing this page only saw lectures THEY personally
+      // marked, even though this page already lists every student in the
+      // department regardless of who teaches them. Widened to the full
+      // department scope so the summary reflects true overall attendance
+      // (every teacher's lectures), matching what students/HOD actually see.
     }).lean();
     const attendanceSummary = {};
     for (const a of allAttendance) {
@@ -335,10 +340,14 @@ router.get(
   }),
 );
 
-// GET /api/teacher/students/:studentId/attendance — per-subject SUMMARY of every
-// lecture THIS teacher has personally marked for this student (course/semester
-// scoped). Used by the student-list modal to answer "what attendance has this
-// teacher recorded for this student so far".
+// GET /api/teacher/students/:studentId/attendance — per-subject SUMMARY of
+// EVERY lecture recorded for this student (any teacher), course/semester
+// scoped. Used by the student-list modal to answer "what's this student's
+// real attendance". Previously scoped to `teacher: req.user.id` only, which
+// meant a teacher (or Class Coordinator) could only ever see the lectures
+// they personally marked — even for a subject someone else teaches. Widened
+// to full department scope so this always reflects the true, complete
+// attendance log, the same as an HOD or the student themself would see.
 router.get(
   "/students/:studentId/attendance",
   asyncHandler(async (req, res) => {
@@ -354,8 +363,7 @@ router.get(
 
     const filter = {
       student: student._id,
-      teacher: req.user.id,
-      ...live,
+      ...scope(req),
     };
     if (req.query.course) filter.course = req.query.course;
     if (req.query.semester) filter.semester = Number(req.query.semester);
@@ -383,8 +391,9 @@ router.get(
 );
 
 // GET /api/teacher/students/:studentId/attendance/subject?subject=NAME — full
-// lecture-by-lecture log (with topic + date) for one subject, scoped to this
-// teacher's own submitted records for this student.
+// lecture-by-lecture log (with topic + date) for one subject. Widened the
+// same way as the summary route above: shows every lecture recorded for
+// this student in this subject, regardless of which teacher marked it.
 router.get(
   "/students/:studentId/attendance/subject",
   asyncHandler(async (req, res) => {
@@ -402,8 +411,7 @@ router.get(
 
     const records = await Attendance.find({
       student: student._id,
-      teacher: req.user.id,
-      ...live,
+      ...scope(req),
     })
       .populate("subject", "name code")
       .sort({ date: -1 });
@@ -600,17 +608,32 @@ function decodeSessionKey(key) {
   }
 }
 
-// GET /api/teacher/attendance/history — one row per lecture ever submitted by this teacher.
+// GET /api/teacher/attendance/history — one row per lecture ever submitted by
+// this teacher. If the teacher is Class Coordinator (see ccSemestersFor) for
+// the requested course+semester, every teacher's lectures for that class are
+// included instead of just their own — same "sees everything" power an HOD
+// has, scoped to their appointed semester.
 router.get(
   "/attendance/history",
   asyncHandler(async (req, res) => {
-    const filter = { teacher: req.user.id, ...live };
-    if (req.query.course) filter.course = req.query.course;
-    if (req.query.semester) filter.semester = Number(req.query.semester);
+    const course = req.query.course;
+    const semester = req.query.semester ? Number(req.query.semester) : null;
+    const isCC = course && semester
+      ? ccSemestersFor(req.user).some((a) => a.course === course && a.semester === semester)
+      : false;
+
+    const filter = isCC
+      ? { college: req.user.college, department: req.user.department, course, semester, ...live }
+      : { teacher: req.user.id, ...live };
+    if (!isCC) {
+      if (req.query.course) filter.course = req.query.course;
+      if (req.query.semester) filter.semester = Number(req.query.semester);
+    }
     const docs = await Attendance.find(filter)
       .select(
-        "date course semester subject subjectName division time type status topic isProxy",
+        "date course semester subject subjectName division time type status topic isProxy teacher",
       )
+      .populate("teacher", "name")
       .lean();
 
     const sessions = new Map();
@@ -639,6 +662,7 @@ router.get(
           topic: d.topic || "",
           isProxy: !!d.isProxy,
           department: req.user.department,
+          teacherName: d.teacher?.name || "",
           present: 0,
           absent: 0,
           total: 0,
@@ -666,8 +690,13 @@ router.get(
   asyncHandler(async (req, res) => {
     const parts = decodeSessionKey(req.params.sessionKey);
     if (!parts) return fail(res, 400, "Invalid session reference.");
+    const isCC = ccSemestersFor(req.user).some(
+      (a) => a.course === parts.course && a.semester === parts.semester,
+    );
     const candidates = await Attendance.find({
-      teacher: req.user.id,
+      ...(isCC
+        ? { college: req.user.college, department: req.user.department }
+        : { teacher: req.user.id }),
       ...live,
       course: parts.course,
       semester: parts.semester,
@@ -729,11 +758,16 @@ router.put(
     if (!Array.isArray(records) || !records.length)
       return fail(res, 400, "No records to update.");
 
+    const isCC = ccSemestersFor(req.user).some(
+      (a) => a.course === parts.course && a.semester === parts.semester,
+    );
     // Same JS-side matching as the GET above — find the exact documents behind
     // this session key first, then update those documents by _id. Nothing here
     // is re-expressed as a filter that could drift from how the key was built.
     const candidates = await Attendance.find({
-      teacher: req.user.id,
+      ...(isCC
+        ? { college: req.user.college, department: req.user.department }
+        : { teacher: req.user.id }),
       ...live,
       course: parts.course,
       semester: parts.semester,
@@ -1187,6 +1221,260 @@ router.delete(
     if (!mark) return fail(res, 404, "Mark not found.");
     await hardDeleteCascade(mark, req.user);
     ok(res, { success: true }, "Mark permanently deleted.");
+  }),
+);
+
+// ── Class Coordinator marks grid ────────────────────────────────────────────
+// A normal teacher can only enter/view marks for the subject(s) they teach.
+// A teacher appointed Class Coordinator (HOD's ccAssignments, see
+// hod/js/cc.js) for a given course+semester gets a full grid across EVERY
+// subject in that semester, for every student in it — not just their own.
+
+// Returns which subjects this teacher may access marks for, for a semester,
+// and whether they're acting as CC (full sem) or a normal teacher (own
+// subject only). The frontend uses this to decide which columns to render
+// and whether editing is allowed at all for a subject.
+function ccSemestersFor(user) {
+  return (user.ccAssignments || []).map((a) => ({
+    course: a.course,
+    semester: Number(a.semester),
+  }));
+}
+
+router.get(
+  "/marks/access",
+  asyncHandler(async (req, res) => {
+    const semester = Number(req.query.semester);
+    const course = req.query.course || req.user.course;
+    if (!semester) return fail(res, 400, "semester is required.");
+
+    const isCC = ccSemestersFor(req.user).some(
+      (a) => a.course === course && a.semester === semester,
+    );
+
+    const subjects = await Subject.find({
+      college: req.user.college,
+      department: req.user.department,
+      course,
+      semester,
+      ...live,
+      ...(isCC ? {} : { teacher: req.user.id }),
+    })
+      .select("name code course semester teacher")
+      .lean();
+
+    ok(res, { success: true, isCC, course, semester, subjects });
+  }),
+);
+
+// GET /api/teacher/marks/grid?course=X&semester=Y&examType=Z
+// Builds the subject-by-student grid: every accessible subject × every
+// student in that course/semester, with any existing Mark already filled in.
+router.get(
+  "/marks/grid",
+  asyncHandler(async (req, res) => {
+    const semester = Number(req.query.semester);
+    const course = req.query.course || req.user.course;
+    const examType = (req.query.examType || "").trim();
+    if (!semester) return fail(res, 400, "semester is required.");
+    if (!examType) return fail(res, 400, "examType (the marks sheet name) is required.");
+
+    const isCC = ccSemestersFor(req.user).some(
+      (a) => a.course === course && a.semester === semester,
+    );
+
+    const subjectFilter = {
+      college: req.user.college,
+      department: req.user.department,
+      course,
+      semester,
+      ...live,
+      ...(isCC ? {} : { teacher: req.user.id }),
+    };
+    const [subjects, students] = await Promise.all([
+      Subject.find(subjectFilter).select("name code").lean(),
+      Student.find({
+        college: req.user.college,
+        department: req.user.department,
+        course,
+        semester,
+        ...live,
+      })
+        .select("name roll")
+        .sort({ roll: 1 })
+        .lean(),
+    ]);
+
+    if (!subjects.length) {
+      return ok(res, {
+        success: true,
+        isCC,
+        subjects: [],
+        students,
+        marks: [],
+        message: isCC
+          ? "No subjects found for this semester."
+          : "You aren't assigned to teach any subject in this semester.",
+      });
+    }
+
+    const marks = await Mark.find({
+      subject: { $in: subjects.map((s) => s._id) },
+      student: { $in: students.map((s) => s._id) },
+      examType,
+      ...live,
+    }).lean();
+
+    ok(res, { success: true, isCC, subjects, students, marks, examType, course, semester });
+  }),
+);
+
+// POST /api/teacher/marks/grid-upsert — save one cell or a batch of cells
+// from the grid. Every record is permission-checked server-side against the
+// same subject scope as GET /marks/grid — a normal teacher cannot slip in a
+// mark for a subject they don't teach just by editing the request body.
+router.post(
+  "/marks/grid-upsert",
+  asyncHandler(async (req, res) => {
+    const records = Array.isArray(req.body) ? req.body : req.body.records || [];
+    if (!records.length) return fail(res, 400, "At least one mark record is required.");
+
+    // Figure out which subject IDs this teacher is allowed to write to, once,
+    // rather than re-deriving CC status per record.
+    const semesters = [...new Set(records.map((r) => Number(r.semester)))];
+    const courses = [...new Set(records.map((r) => r.course || req.user.course))];
+    const allowedSubjectIds = new Set();
+    for (const course of courses) {
+      for (const semester of semesters) {
+        const isCC = ccSemestersFor(req.user).some(
+          (a) => a.course === course && a.semester === semester,
+        );
+        const subs = await Subject.find({
+          college: req.user.college,
+          department: req.user.department,
+          course,
+          semester,
+          ...live,
+          ...(isCC ? {} : { teacher: req.user.id }),
+        })
+          .select("_id")
+          .lean();
+        subs.forEach((s) => allowedSubjectIds.add(String(s._id)));
+      }
+    }
+
+    const rejected = [];
+    const results = await Promise.all(
+      records.map(async (r) => {
+        if (!r.student || !r.subject || !r.examType) return null;
+        if (!allowedSubjectIds.has(String(r.subject))) {
+          rejected.push(r.subject);
+          return null;
+        }
+        return Mark.findOneAndUpdate(
+          {
+            student: r.student,
+            subject: r.subject,
+            examType: r.examType,
+            college: req.user.college,
+            department: req.user.department,
+            ...live,
+          },
+          {
+            $set: {
+              marks: r.marks,
+              maxMarks: r.maxMarks || 100,
+              subjectName: r.subjectName,
+              teacher: req.user.id,
+              enteredBy: "teacher",
+              updatedBy: req.user.id,
+            },
+            $setOnInsert: {
+              student: r.student,
+              subject: r.subject,
+              examType: r.examType,
+              college: req.user.college,
+              department: req.user.department,
+              createdBy: req.user.id,
+            },
+          },
+          { upsert: true, new: true },
+        );
+      }),
+    );
+    const saved = results.filter(Boolean);
+    ok(
+      res,
+      {
+        success: true,
+        marks: saved,
+        saved: saved.length,
+        rejected: rejected.length,
+      },
+      rejected.length
+        ? `${saved.length} mark(s) saved. ${rejected.length} rejected — you don't teach that subject.`
+        : `${saved.length} mark(s) saved.`,
+    );
+  }),
+);
+
+// PATCH /api/teacher/marks/publish — the "send marks to student" toggle.
+// Body: { course, semester, examType, subjectIds?, publish } — publish:true
+// makes matching Mark rows visible on the student's own marks page;
+// publish:false pulls them back (e.g. to fix a mistake before re-sending).
+// Scoped the same way as the grid: a normal teacher can only publish/
+// unpublish their own subject's marks; a CC can do the whole semester.
+router.patch(
+  "/marks/publish",
+  asyncHandler(async (req, res) => {
+    const { course, examType, subjectIds } = req.body;
+    const semester = Number(req.body.semester);
+    const publish = req.body.publish !== false; // default true
+    if (!course || !semester || !examType)
+      return fail(res, 400, "course, semester and examType are required.");
+
+    const isCC = ccSemestersFor(req.user).some(
+      (a) => a.course === course && a.semester === semester,
+    );
+
+    const subjectFilter = {
+      college: req.user.college,
+      department: req.user.department,
+      course,
+      semester,
+      ...live,
+      ...(isCC ? {} : { teacher: req.user.id }),
+    };
+    const allowedSubjects = await Subject.find(subjectFilter).select("_id").lean();
+    let allowedIds = allowedSubjects.map((s) => String(s._id));
+    if (Array.isArray(subjectIds) && subjectIds.length) {
+      allowedIds = allowedIds.filter((id) => subjectIds.includes(id));
+    }
+    if (!allowedIds.length)
+      return fail(res, 403, "You don't have permission to publish marks for this semester.");
+
+    const result = await Mark.updateMany(
+      {
+        subject: { $in: allowedIds },
+        examType,
+        college: req.user.college,
+        department: req.user.department,
+        ...live,
+      },
+      {
+        $set: publish
+          ? { published: true, publishedAt: new Date(), publishedBy: req.user.id }
+          : { published: false },
+      },
+    );
+
+    ok(
+      res,
+      { success: true, matched: result.matchedCount, modified: result.modifiedCount, published: publish },
+      publish
+        ? `Marks sent to ${result.modifiedCount} student record(s).`
+        : `Marks withdrawn from ${result.modifiedCount} student record(s).`,
+    );
   }),
 );
 

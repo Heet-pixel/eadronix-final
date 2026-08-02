@@ -10,21 +10,14 @@
 // screen: Select Class → Select Subject → Mark Students (card grid) → Confirm.
 
 /* ═══ STATE ═══ */
-let savedAttendance = {}; // local cache used to keep report %s in sync after a save
+let savedAttendance={}; // local cache used to keep report %s in sync after a save
 
 // Mark Attendance state
-let maAttCourse = "",
-  maAttSem = "",
-  maAttSubject = "",
-  maAttDate = "",
-  maAttTopic = "",
-  maAttProxy = false;
-let maAttStart = "09:00",
-  maAttEnd = "09:30",
-  maAttDivision = "";
-let maAttEndManuallySet = false; // true once the HOD edits End Time directly — stops us overwriting their choice
-let maAttRecords = {}; // { studentId: 'P' | 'A' }
-let maStep = 1;
+let maAttCourse='', maAttSem='', maAttSubject='', maAttDate='', maAttTopic='', maAttProxy=false;
+let maAttStart='09:00', maAttEnd='09:30', maAttDivision='';
+let maAttEndManuallySet=false; // true once the HOD edits End Time directly — stops us overwriting their choice
+let maAttRecords={}; // { studentId: 'P' | 'A' }
+let maStep=1;
 
 /**
  * _todayIsoDateString()
@@ -34,8 +27,8 @@ let maStep = 1;
  * when marking attendance — a lecture that hasn't happened yet can't have
  * attendance taken for it.
  */
-function _todayIsoDateString() {
-  return new Date().toISOString().split("T")[0];
+function _todayIsoDateString(){
+  return new Date().toISOString().split('T')[0];
 }
 
 /**
@@ -48,17 +41,16 @@ function _todayIsoDateString() {
  * themselves, we stop overwriting it (maAttEndManuallySet), same pattern as
  * the Schedule module's autoCalcSlotEnd().
  */
-function onMaStartTimeChange(newStart) {
+function onMaStartTimeChange(newStart){
   maAttStart = newStart;
   if (!maAttEndManuallySet) {
-    const computed =
-      typeof calcEndTime === "function" ? calcEndTime(newStart, "Lecture") : "";
+    const computed = typeof calcEndTime === 'function' ? calcEndTime(newStart, 'Lecture') : '';
     if (computed) maAttEnd = computed;
   }
   renderMarkAttPage();
 }
 
-function onMaEndTimeChange(newEnd) {
+function onMaEndTimeChange(newEnd){
   maAttEnd = newEnd;
   maAttEndManuallySet = true; // HOD took control — never auto-overwrite again this session
   renderMarkAttPage();
@@ -75,52 +67,44 @@ function onMaEndTimeChange(newEnd) {
  * "must be 30 minutes" message.
  * Returns { ok: true } or { ok: false, message }.
  */
-function _validateMaTiming() {
+function _validateMaTiming(){
   if (!maAttStart || !maAttEnd) return { ok: true }; // both optional — nothing to check
-  const [startHour, startMinute] = maAttStart.split(":").map(Number);
-  const [endHour, endMinute] = maAttEnd.split(":").map(Number);
+  const [startHour, startMinute] = maAttStart.split(':').map(Number);
+  const [endHour, endMinute] = maAttEnd.split(':').map(Number);
   if ([startHour, startMinute, endHour, endMinute].some(Number.isNaN)) {
-    return { ok: false, message: "Please enter a valid start and end time." };
+    return { ok: false, message: 'Please enter a valid start and end time.' };
   }
-  const durationInMinutes =
-    endHour * 60 + endMinute - (startHour * 60 + startMinute);
+  const durationInMinutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
   if (durationInMinutes <= 0) {
-    return { ok: false, message: "End time must be after start time." };
+    return { ok: false, message: 'End time must be after start time.' };
   }
-  // if (durationInMinutes < 30) {
-  //   return { ok: false, message: 'A lecture must be at least 30 minutes long.' };
-  // }
+  if (durationInMinutes < 30) {
+    return { ok: false, message: 'A lecture must be at least 30 minutes long.' };
+  }
   return { ok: true };
 }
 
-function refreshStuReportsFromAtt() {
-  allStudents.forEach((stu) => {
-    let rpt = stuReports.find((r) => String(r.id) === String(stu.id));
-    if (!rpt) return;
-    let subjNames = getSubjNames(stu.course, stu.sem);
-    rpt.subjects = subjNames.map((subName) => {
-      let dates = Object.keys(
-        ((savedAttendance[stu.course] || {})[stu.sem] || {})[subName] || {},
-      );
-      if (!dates.length) {
-        let ex = rpt.subjects.find((s) => s.subject === subName);
-        return ex || { subject: subName, total: 0, attended: 0, pct: 0 };
+function refreshStuReportsFromAtt(){
+  allStudents.forEach(stu=>{
+    let rpt=stuReports.find(r=>String(r.id)===String(stu.id));
+    if(!rpt) return;
+    let subjNames=getSubjNames(stu.course,stu.sem);
+    rpt.subjects=subjNames.map(subName=>{
+      let dates=Object.keys(((savedAttendance[stu.course]||{})[stu.sem]||{})[subName]||{});
+      if(!dates.length){
+        let ex=rpt.subjects.find(s=>s.subject===subName);
+        return ex||{subject:subName,total:0,attended:0,pct:0};
       }
-      let total = dates.length;
-      let attended = dates.filter(
-        (d) =>
-          (savedAttendance[stu.course][stu.sem][subName][d] || {})[stu.id] ===
-          "P",
-      ).length;
-      let pct = total > 0 ? Math.round((attended / total) * 100) : 100;
-      return { subject: subName, total, attended, pct };
+      let total=dates.length;
+      let attended=dates.filter(d=>((savedAttendance[stu.course][stu.sem][subName][d])||{})[stu.id]==='P').length;
+      let pct=total>0?Math.round(attended/total*100):100;
+      return {subject:subName,total,attended,pct};
     });
-    let ot = rpt.subjects.reduce((a, b) => a + b.total, 0) || 1;
-    let oa = rpt.subjects.reduce((a, b) => a + b.attended, 0);
-    rpt.overallTotal = ot;
-    rpt.overallAtt = oa;
-    rpt.percentage = Math.round((oa / ot) * 100);
-    rpt.status = rpt.percentage >= 75 ? "Regular" : "Shortage";
+    let ot=rpt.subjects.reduce((a,b)=>a+b.total,0)||1;
+    let oa=rpt.subjects.reduce((a,b)=>a+b.attended,0);
+    rpt.overallTotal=ot; rpt.overallAtt=oa;
+    rpt.percentage=Math.round(oa/ot*100);
+    rpt.status=rpt.percentage>=75?'Regular':'Shortage';
   });
 }
 
@@ -133,34 +117,29 @@ function refreshStuReportsFromAtt() {
 // ═══════════════════════════════════════════════════════════
 
 /** Called when navigating to "Mark Attendance" section */
-function loadMarkAttendance() {
-  maAttCourse = "";
-  maAttSem = "";
-  maAttSubject = "";
-  maAttTopic = "";
-  maAttProxy = false;
-  maAttDivision = "";
-  maAttDate = new Date().toISOString().split("T")[0]; // default: today
-  maAttStart = "09:00";
-  maAttEnd = "09:30";
-  maAttEndManuallySet = false;
-  maAttRecords = {};
-  maStep = 1;
+function loadMarkAttendance(){
+  maAttCourse=''; maAttSem=''; maAttSubject='';
+  maAttTopic=''; maAttProxy=false; maAttDivision='';
+  maAttDate = new Date().toISOString().split('T')[0]; // default: today
+  maAttStart='09:00'; maAttEnd='09:30';
+  maAttEndManuallySet=false;
+  maAttRecords={};
+  maStep=1;
   renderMarkAttPage();
 }
 
 /** Updates the visual stepper (step1..step4) based on how far along the HOD is */
-function updateMaStepper() {
-  for (let i = 1; i <= 4; i++) {
-    const el = document.getElementById("maStep" + i);
-    if (!el) continue;
-    el.classList.remove("active", "done");
-    if (i < maStep) el.classList.add("done");
-    else if (i === maStep) el.classList.add("active");
+function updateMaStepper(){
+  for(let i=1;i<=4;i++){
+    const el=document.getElementById('maStep'+i);
+    if(!el) continue;
+    el.classList.remove('active','done');
+    if(i<maStep) el.classList.add('done');
+    else if(i===maStep) el.classList.add('active');
   }
 }
 
-function maStepperHTML() {
+function maStepperHTML(){
   return `<div class="ma-stepper" id="maStepper">
     <div class="ma-step-item" id="maStep1"><div class="ma-step-num">1</div><span class="ma-step-label">Select Class</span></div>
     <div class="ma-step-sep"></div>
@@ -173,19 +152,15 @@ function maStepperHTML() {
 }
 
 /** Render the full Mark Attendance page: stepper + whichever steps are unlocked so far */
-function renderMarkAttPage() {
+function renderMarkAttPage(){
   // Determine how far the HOD has progressed, purely from state (course/sem -> subject -> ready)
-  maStep = !maAttCourse || !maAttSem ? 1 : !maAttSubject ? 2 : 3;
+  maStep = (!maAttCourse||!maAttSem) ? 1 : (!maAttSubject ? 2 : 3);
 
-  let courseOpts = HOD_COURSES.map(
-    (c) =>
-      `<option value="${c}" ${maAttCourse === c ? "selected" : ""}>${c}</option>`,
-  ).join("");
-  let semOpts = '<option value="">-- Semester --</option>';
-  for (let s = 1; s <= SEM_COUNT; s++)
-    semOpts += `<option value="${s}" ${maAttSem == s ? "selected" : ""}>Semester ${s}</option>`;
+  let courseOpts=HOD_COURSES.map(c=>`<option value="${c}" ${maAttCourse===c?'selected':''}>${c}</option>`).join('');
+  let semOpts='<option value="">-- Semester --</option>';
+  for(let s=1;s<=SEM_COUNT;s++) semOpts+=`<option value="${s}" ${maAttSem==s?'selected':''}>Semester ${s}</option>`;
 
-  let html = `<div class="att-mark-section">
+  let html=`<div class="att-mark-section">
     <div class="att-mark-header">
       <div class="att-mark-title">📋 Mark Attendance</div>
       <button class="btn btn-ghost btn-sm" onclick="HodAttHistory.open()">🕘 Attendance History</button>
@@ -205,7 +180,7 @@ function renderMarkAttPage() {
         </div>
         <div class="att-ctrl-group">
           <label>Semester</label>
-          <select onchange="maAttSem=this.value;maAttSubject='';maAttRecords={};renderMarkAttPage()" ${!maAttCourse ? "disabled" : ""}>
+          <select onchange="maAttSem=this.value;maAttSubject='';maAttRecords={};renderMarkAttPage()" ${!maAttCourse?'disabled':''}>
             ${semOpts}
           </select>
         </div>
@@ -223,7 +198,7 @@ function renderMarkAttPage() {
         </div>
         <div class="att-ctrl-group">
           <label>Division (optional)</label>
-          <input type="text" value="${escHtml(maAttDivision || "")}" placeholder="e.g. A" oninput="maAttDivision=this.value">
+          <input type="text" value="${escHtml(maAttDivision||'')}" placeholder="e.g. A" oninput="maAttDivision=this.value">
         </div>
         <div class="att-ctrl-group att-topic-group">
           <label>Topic taught today (optional)</label>
@@ -232,72 +207,65 @@ function renderMarkAttPage() {
       </div>
     </div>`;
 
-  if (!maAttCourse || !maAttSem) {
-    html += `<div class="empty-state" style="padding:32px 20px">
+  if(!maAttCourse||!maAttSem){
+    html+=`<div class="empty-state" style="padding:32px 20px">
       <div class="e-icon">👉</div>
-      <p>${!maAttCourse ? "Select a course above to begin" : "Now select a semester"}</p>
+      <p>${!maAttCourse?'Select a course above to begin':'Now select a semester'}</p>
     </div>`;
-    document.getElementById("markAttContent").innerHTML = html;
+    document.getElementById('markAttContent').innerHTML=html;
     updateMaStepper();
     return;
   }
 
   // ── Step 2: Select Subject (chip picker) ──
-  const subjNames = getSubjNames(maAttCourse, parseInt(maAttSem));
-  html += `<div class="card" style="margin-bottom:16px">
+  const subjNames=getSubjNames(maAttCourse,parseInt(maAttSem));
+  html+=`<div class="card" style="margin-bottom:16px">
     <div class="card-title"><span class="ct-icon">📄</span> Step 2 — Select Subject</div>
     <label class="proxy-toggle">
-      <input type="checkbox" ${maAttProxy ? "checked" : ""} onchange="maAttProxy=this.checked;maAttSubject='';maAttRecords={};renderMarkAttPage()">
+      <input type="checkbox" ${maAttProxy?'checked':''} onchange="maAttProxy=this.checked;maAttSubject='';maAttRecords={};renderMarkAttPage()">
       <span>Proxy lecture</span>
     </label>
     <div class="ma-subj-chip-wrap">`;
-  if (!subjNames.length) {
-    html += `<p style="color:var(--danger);font-size:13px;font-weight:600;margin-top:6px">
+  if(!subjNames.length){
+    html+=`<p style="color:var(--danger);font-size:13px;font-weight:600;margin-top:6px">
       No subject is assigned to ${escHtml(maAttCourse)} Sem ${maAttSem} yet. Add it from the Subjects section first.
     </p>`;
   } else {
-    subjNames.forEach((sub) => {
-      html += `<div class="ma-s-chip${maAttSubject === sub ? " sel" : ""}" onclick="selectMaSubject(decodeURIComponent('${encodeURIComponent(sub)}'))">${escHtml(sub)}</div>`;
+    subjNames.forEach(sub=>{
+      html+=`<div class="ma-s-chip${maAttSubject===sub?' sel':''}" onclick="selectMaSubject(decodeURIComponent('${encodeURIComponent(sub)}'))">${escHtml(sub)}</div>`;
     });
   }
-  html += `</div></div>`;
+  html+=`</div></div>`;
 
-  if (!maAttSubject) {
-    html += `<div class="empty-state" style="padding:32px 20px">
+  if(!maAttSubject){
+    html+=`<div class="empty-state" style="padding:32px 20px">
       <div class="e-icon">👉</div><p>Now select a subject to load students.</p>
     </div>`;
-    document.getElementById("markAttContent").innerHTML = html;
+    document.getElementById('markAttContent').innerHTML=html;
     updateMaStepper();
     return;
   }
 
   // ── Step 3: Mark Students (card grid) ──
-  let saved = (((savedAttendance[maAttCourse] || {})[maAttSem] || {})[
-    maAttSubject
-  ] || {})[maAttDate];
-  if (!Object.keys(maAttRecords).length && saved)
-    maAttRecords = Object.assign({}, saved);
+  let saved=(((savedAttendance[maAttCourse]||{})[maAttSem]||{})[maAttSubject]||{})[maAttDate];
+  if(!Object.keys(maAttRecords).length && saved) maAttRecords=Object.assign({},saved);
 
-  let students = allStudents.filter(
-    (s) => s.course === maAttCourse && String(s.sem) === String(maAttSem),
-  );
-  if (!students.length) {
-    html += `<div class="empty-state" style="padding:32px 20px">
+  let students=allStudents.filter(s=>s.course===maAttCourse&&String(s.sem)===String(maAttSem));
+  if(!students.length){
+    html+=`<div class="empty-state" style="padding:32px 20px">
       <div class="e-icon">📄</div><p>No students found for this selection.</p>
     </div>`;
-    document.getElementById("markAttContent").innerHTML = html;
+    document.getElementById('markAttContent').innerHTML=html;
     updateMaStepper();
     return;
   }
 
-  students.forEach((s) => {
-    if (!maAttRecords[s.id]) maAttRecords[s.id] = "P";
-  });
-  let pC = students.filter((s) => maAttRecords[s.id] === "P").length;
-  let aC = students.filter((s) => maAttRecords[s.id] === "A").length;
-  let pct = students.length ? Math.round((pC / students.length) * 100) : 0;
+  students.forEach(s=>{ if(!maAttRecords[s.id]) maAttRecords[s.id]='P'; });
+  let pC=students.filter(s=>maAttRecords[s.id]==='P').length;
+  let aC=students.filter(s=>maAttRecords[s.id]==='A').length;
+  let pct=students.length?Math.round(pC/students.length*100):0;
 
-  html += `<div class="card">
+  html+=`<div class="card">
     <div class="card-title"><span class="ct-icon">👨‍🏫</span> Step 3 — Mark Attendance <span class="card-hd-sub" style="font-size:12px;color:var(--text2);font-weight:500;margin-left:8px">Tap a card to toggle Present ↔ Absent</span></div>
     <div class="att-stats-row" id="maAttSummaryBar">
       <div class="att-stat-chip total"><div class="asv">${students.length}</div><div class="asl">Total</div></div>
@@ -312,18 +280,18 @@ function renderMarkAttPage() {
     </div>
     <div class="att-card-grid" id="maAttCardGrid">`;
 
-  students.forEach((s) => {
-    let isPresent = maAttRecords[s.id] !== "A";
-    html += `<div class="att-card ${isPresent ? "present" : "absent"}" id="macard_${s.id}"
+  students.forEach(s=>{
+    let isPresent=maAttRecords[s.id]!=='A';
+    html+=`<div class="att-card ${isPresent?'present':'absent'}" id="macard_${s.id}"
       onclick="toggleMaCard('${s.id}')" title="${escHtml(s.name)} — Click to toggle">
-      <img src="${s.avatar || "https://ui-avatars.com/api/?name=" + encodeURIComponent(s.name) + "&size=80&background=random"}" alt="">
-      <div class="att-card-name">${escHtml((s.name || "").split(" ")[0])}</div>
-      <div class="att-card-roll">${escHtml(s.roll || "")}</div>
-      <div class="att-card-status">${isPresent ? "Present" : "Absent"}</div>
+      <img src="${s.avatar || 'https://ui-avatars.com/api/?name='+encodeURIComponent(s.name)+'&size=80&background=random'}" alt="">
+      <div class="att-card-name">${escHtml((s.name||'').split(' ')[0])}</div>
+      <div class="att-card-roll">${escHtml(s.roll||'')}</div>
+      <div class="att-card-status">${isPresent?'Present':'Absent'}</div>
     </div>`;
   });
 
-  html += `</div>
+  html+=`</div>
     <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
       <button class="btn btn-primary" onclick="prepareMaConfirm()">📚 Review &amp; Submit</button>
       <button class="btn btn-ghost" onclick="loadMarkAttendance()">🔄 Reset</button>
@@ -341,49 +309,40 @@ function renderMarkAttPage() {
     </div>
   </div>`; // close att-mark-section
 
-  document.getElementById("markAttContent").innerHTML = html;
+  document.getElementById('markAttContent').innerHTML=html;
   updateMaStepper();
 }
 
 /** Subject chip clicked — locks in the subject and reveals the grid (Step 3) */
-function selectMaSubject(sub) {
-  maAttSubject = sub;
-  maAttRecords = {};
+function selectMaSubject(sub){
+  maAttSubject=sub;
+  maAttRecords={};
   renderMarkAttPage();
-  setTimeout(() => {
-    document
-      .getElementById("maAttCardGrid")
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, 150);
+  setTimeout(()=>{ document.getElementById('maAttCardGrid')?.scrollIntoView({behavior:'smooth',block:'start'}); },150);
 }
 
 /**
  * Toggle a single student card between Present and Absent.
  * Updates only the clicked card + stats row — no full re-render.
  */
-function toggleMaCard(stuId) {
-  maAttRecords[stuId] = maAttRecords[stuId] === "A" ? "P" : "A";
-  let card = document.getElementById("macard_" + stuId);
-  if (card) {
-    let isPresent = maAttRecords[stuId] === "P";
-    card.className = "att-card " + (isPresent ? "present" : "absent");
-    card.querySelector(".att-card-status").textContent = isPresent
-      ? "Present"
-      : "Absent";
+function toggleMaCard(stuId){
+  maAttRecords[stuId] = maAttRecords[stuId]==='A' ? 'P' : 'A';
+  let card=document.getElementById('macard_'+stuId);
+  if(card){
+    let isPresent=maAttRecords[stuId]==='P';
+    card.className='att-card '+(isPresent?'present':'absent');
+    card.querySelector('.att-card-status').textContent=isPresent?'Present':'Absent';
   }
   _refreshMaStats();
 }
 
-function _refreshMaStats() {
-  let students = allStudents.filter(
-    (s) => s.course === maAttCourse && String(s.sem) === String(maAttSem),
-  );
-  let pC = students.filter((s) => maAttRecords[s.id] === "P").length;
-  let aC = students.filter((s) => maAttRecords[s.id] === "A").length;
-  let pct = students.length ? Math.round((pC / students.length) * 100) : 0;
-  let row = document.getElementById("maAttSummaryBar");
-  if (row)
-    row.innerHTML = `
+function _refreshMaStats(){
+  let students=allStudents.filter(s=>s.course===maAttCourse&&String(s.sem)===String(maAttSem));
+  let pC=students.filter(s=>maAttRecords[s.id]==='P').length;
+  let aC=students.filter(s=>maAttRecords[s.id]==='A').length;
+  let pct=students.length?Math.round(pC/students.length*100):0;
+  let row=document.getElementById('maAttSummaryBar');
+  if(row) row.innerHTML=`
     <div class="att-stat-chip total"><div class="asv">${students.length}</div><div class="asl">Total</div></div>
     <div class="att-stat-chip present"><div class="asv">${pC}</div><div class="asl">Present</div></div>
     <div class="att-stat-chip absent"><div class="asv">${aC}</div><div class="asl">Absent</div></div>
@@ -391,51 +350,37 @@ function _refreshMaStats() {
 }
 
 /** Mark all students Present or Absent and re-render (full grid refresh) */
-function maMarkAll(status) {
-  let students = allStudents.filter(
-    (s) => s.course === maAttCourse && String(s.sem) === String(maAttSem),
-  );
-  students.forEach((s) => {
-    maAttRecords[s.id] = status;
-  });
+function maMarkAll(status){
+  let students=allStudents.filter(s=>s.course===maAttCourse&&String(s.sem)===String(maAttSem));
+  students.forEach(s=>{ maAttRecords[s.id]=status; });
   renderMarkAttPage();
 }
 
 /** Step 4 — validate + show the confirm panel with a final numbers summary */
-function prepareMaConfirm() {
-  if (!maAttCourse || !maAttSem || !maAttSubject || !maAttDate) {
-    showToast("Please select all fields.", true);
-    return;
-  }
+function prepareMaConfirm(){
+  if(!maAttCourse||!maAttSem||!maAttSubject||!maAttDate){showToast('Please select all fields.',true);return;}
   if (maAttDate > _todayIsoDateString()) {
-    showToast("Attendance cannot be marked for a future date.", true);
+    showToast('Attendance cannot be marked for a future date.', true);
     return;
   }
   const timingCheck1 = _validateMaTiming();
-  if (!timingCheck1.ok) {
-    showToast(timingCheck1.message, true);
-    return;
-  }
-  let students = allStudents.filter(
-    (s) => s.course === maAttCourse && String(s.sem) === String(maAttSem),
-  );
-  let pC = students.filter((s) => maAttRecords[s.id] === "P").length;
-  let aC = students.filter((s) => maAttRecords[s.id] === "A").length;
-  let pct = students.length ? Math.round((pC / students.length) * 100) : 0;
-  const panel = document.getElementById("maConfPanel");
-  const nums = document.getElementById("maConfNums");
-  if (nums)
-    nums.innerHTML = `
+  if (!timingCheck1.ok) { showToast(timingCheck1.message, true); return; }
+  let students=allStudents.filter(s=>s.course===maAttCourse&&String(s.sem)===String(maAttSem));
+  let pC=students.filter(s=>maAttRecords[s.id]==='P').length;
+  let aC=students.filter(s=>maAttRecords[s.id]==='A').length;
+  let pct=students.length?Math.round(pC/students.length*100):0;
+  const panel=document.getElementById('maConfPanel');
+  const nums=document.getElementById('maConfNums');
+  if(nums) nums.innerHTML=`
     <div class="att-stat-chip total"><div class="asv">${students.length}</div><div class="asl">Total</div></div>
     <div class="att-stat-chip present"><div class="asv">${pC}</div><div class="asl">Present</div></div>
     <div class="att-stat-chip absent"><div class="asv">${aC}</div><div class="asl">Absent</div></div>
     <div class="att-stat-chip pct"><div class="asv">${pct}%</div><div class="asl">% Present</div></div>`;
-  if (panel) {
-    panel.classList.add("open");
-    panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  if(panel){
+    panel.classList.add('open');
+    panel.scrollIntoView({behavior:'smooth',block:'nearest'});
   }
-  maStep = 4;
-  updateMaStepper();
+  maStep=4; updateMaStepper();
 }
 
 /**
@@ -444,69 +389,54 @@ function prepareMaConfirm() {
  * 2. On success, mirrors into local savedAttendance (for reports/student modals)
  * 3. Refreshes student attendance percentages in the reports module
  */
-async function saveMarkAttendance() {
-  if (!maAttCourse || !maAttSem || !maAttSubject || !maAttDate) {
-    showToast("Please select all fields.", true);
-    return;
-  }
+async function saveMarkAttendance(){
+  if(!maAttCourse||!maAttSem||!maAttSubject||!maAttDate){showToast('Please select all fields.',true);return;}
 
   // Catch the two new time rules on the client first, so the HOD gets
   // instant feedback instead of waiting for a round trip to the server
   // just to find out the date or duration was invalid.
   if (maAttDate > _todayIsoDateString()) {
-    showToast("Attendance cannot be marked for a future date.", true);
+    showToast('Attendance cannot be marked for a future date.', true);
     return;
   }
   const timingCheck2 = _validateMaTiming();
-  if (!timingCheck2.ok) {
-    showToast(timingCheck2.message, true);
-    return;
-  }
+  if (!timingCheck2.ok) { showToast(timingCheck2.message, true); return; }
 
-  let pC = Object.values(maAttRecords).filter((v) => v === "P").length;
-  let aC = Object.values(maAttRecords).filter((v) => v === "A").length;
+  let pC=Object.values(maAttRecords).filter(v=>v==='P').length;
+  let aC=Object.values(maAttRecords).filter(v=>v==='A').length;
 
   // 2. POST to production backend — this is the source of truth. If it
   // fails (validation error, duplicate lecture, time conflict, etc.) we
   // stop here and surface the real error instead of pretending it saved.
-  try {
-    await apiJson("/api/hod/attendance", {
-      method: "POST",
-      body: JSON.stringify({
-        course: maAttCourse,
-        semester: maAttSem,
-        subject: maAttSubject,
-        date: maAttDate,
-        records: maAttRecords,
-        time: maAttStart && maAttEnd ? `${maAttStart} - ${maAttEnd}` : "",
-        division: maAttDivision || "",
+  try{
+    await apiJson('/api/hod/attendance',{
+      method:'POST',
+      body:JSON.stringify({
+        course:maAttCourse, semester:maAttSem, subject:maAttSubject,
+        date:maAttDate, records:maAttRecords,
+        time: (maAttStart && maAttEnd) ? `${maAttStart} - ${maAttEnd}` : '',
+        division: maAttDivision || '',
         topic: maAttTopic,
         isProxy: maAttProxy,
-      }),
+      })
     });
-  } catch (e) {
-    showToast(
-      e.message || "Failed to save attendance. Please try again.",
-      true,
-    );
+  }catch(e){
+    showToast(e.message || 'Failed to save attendance. Please try again.', true);
     return;
   }
 
   // 1. Cache locally too (keeps report %s in sync without a re-fetch)
-  if (!savedAttendance[maAttCourse]) savedAttendance[maAttCourse] = {};
-  if (!savedAttendance[maAttCourse][maAttSem])
-    savedAttendance[maAttCourse][maAttSem] = {};
-  if (!savedAttendance[maAttCourse][maAttSem][maAttSubject])
-    savedAttendance[maAttCourse][maAttSem][maAttSubject] = {};
-  savedAttendance[maAttCourse][maAttSem][maAttSubject][maAttDate] =
-    Object.assign({}, maAttRecords);
+  if(!savedAttendance[maAttCourse]) savedAttendance[maAttCourse]={};
+  if(!savedAttendance[maAttCourse][maAttSem]) savedAttendance[maAttCourse][maAttSem]={};
+  if(!savedAttendance[maAttCourse][maAttSem][maAttSubject]) savedAttendance[maAttCourse][maAttSem][maAttSubject]={};
+  savedAttendance[maAttCourse][maAttSem][maAttSubject][maAttDate]=Object.assign({},maAttRecords);
 
   // 3. Refresh percentage calculations in reports
   invalidateAttReportCache();
   try {
     await buildStuReports(maAttCourse, maAttSem, true);
   } catch (e) {
-    console.warn("[HOD] Attendance report refresh failed:", e.message);
+    console.warn('[HOD] Attendance report refresh failed:', e.message);
   }
   refreshStuReportsFromAtt();
   showToast(`Attendance saved! ${pC} Present, ${aC} Absent.`);
@@ -517,53 +447,25 @@ async function saveMarkAttendance() {
  * Export the current Mark Attendance view to Excel.
  * Columns: Name | Roll | Course | Sem | Subject | Date | Status
  */
-function exportMarkAttExcel() {
-  if (!maAttCourse || !maAttSem || !maAttSubject) {
-    showToast("Select course, semester and subject first.", true);
-    return;
-  }
-  let students = allStudents.filter(
-    (s) => s.course === maAttCourse && String(s.sem) === String(maAttSem),
-  );
-  if (!students.length) {
-    showToast("No students found.", true);
-    return;
-  }
-  try {
-    let data = [
-      ["Name", "Roll No", "Course", "Sem", "Subject", "Date", "Status"],
-    ];
-    students.forEach((s) => {
-      let st = maAttRecords[s.id] || "P";
-      let label = st === "P" ? "Present" : st === "A" ? "Absent" : "Late";
-      data.push([
-        s.name,
-        s.roll,
-        s.course,
-        `Sem ${s.sem}`,
-        maAttSubject,
-        maAttDate,
-        label,
-      ]);
+function exportMarkAttExcel(){
+  if(!maAttCourse||!maAttSem||!maAttSubject){showToast('Select course, semester and subject first.',true);return;}
+  let students=allStudents.filter(s=>s.course===maAttCourse&&String(s.sem)===String(maAttSem));
+  if(!students.length){showToast('No students found.',true);return;}
+  try{
+    let data=[['Name','Roll No','Course','Sem','Subject','Date','Status']];
+    students.forEach(s=>{
+      let st=maAttRecords[s.id]||'P';
+      let label=st==='P'?'Present':st==='A'?'Absent':'Late';
+      data.push([s.name,s.roll,s.course,`Sem ${s.sem}`,maAttSubject,maAttDate,label]);
     });
-    let wb = XLSX.utils.book_new();
-    let ws = XLSX.utils.aoa_to_sheet(data);
-    ws["!cols"] = [
-      { wch: 24 },
-      { wch: 14 },
-      { wch: 10 },
-      { wch: 8 },
-      { wch: 28 },
-      { wch: 14 },
-      { wch: 10 },
-    ];
-    XLSX.utils.book_append_sheet(wb, ws, "Attendance");
-    let fn = `Attendance_${maAttCourse}_Sem${maAttSem}_${maAttSubject.replace(/\s/g, "_")}_${maAttDate}`;
-    XLSX.writeFile(wb, fn + ".xlsx");
-    showToast("Attendance Excel downloaded!");
-  } catch (e) {
-    showToast("Export failed: " + e.message, true);
-  }
+    let wb=XLSX.utils.book_new();
+    let ws=XLSX.utils.aoa_to_sheet(data);
+    ws['!cols']=[{wch:24},{wch:14},{wch:10},{wch:8},{wch:28},{wch:14},{wch:10}];
+    XLSX.utils.book_append_sheet(wb,ws,'Attendance');
+    let fn=`Attendance_${maAttCourse}_Sem${maAttSem}_${maAttSubject.replace(/\s/g,'_')}_${maAttDate}`;
+    XLSX.writeFile(wb,fn+'.xlsx');
+    showToast('Attendance Excel downloaded!');
+  }catch(e){showToast('Export failed: '+e.message,true);}
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -577,29 +479,23 @@ const HodAttHistory = {
 
   async open() {
     this._ensureModals();
-    document.getElementById("hodAttHistoryOverlay").classList.add("open");
-    const body = document.getElementById("hodAttHistoryBody");
-    body.innerHTML = "Loading…";
+    document.getElementById('hodAttHistoryOverlay').classList.add('open');
+    const body = document.getElementById('hodAttHistoryBody');
+    body.innerHTML = 'Loading…';
     try {
-      const d = await apiJson("/api/hod/attendance/history");
+      const d = await apiJson('/api/hod/attendance/history');
       this._renderList(d.sessions || []);
     } catch (e) {
       body.innerHTML = `<p style="color:var(--danger)">${e.message}</p>`;
     }
   },
 
-  close() {
-    document.getElementById("hodAttHistoryOverlay")?.classList.remove("open");
-  },
-  closeSession() {
-    document.getElementById("hodAttSessionOverlay")?.classList.remove("open");
-  },
+  close() { document.getElementById('hodAttHistoryOverlay')?.classList.remove('open'); },
+  closeSession() { document.getElementById('hodAttSessionOverlay')?.classList.remove('open'); },
 
   _ensureModals() {
-    if (document.getElementById("hodAttHistoryOverlay")) return;
-    document.body.insertAdjacentHTML(
-      "beforeend",
-      `
+    if (document.getElementById('hodAttHistoryOverlay')) return;
+    document.body.insertAdjacentHTML('beforeend', `
       <div class="modal-overlay" id="hodAttHistoryOverlay" onclick="if(event.target===this)HodAttHistory.close()">
         <div class="modal-card" style="max-width:680px;max-height:82vh;display:flex;flex-direction:column">
           <div class="modal-header"><span>🕘 Attendance History — All Teachers</span><button onclick="HodAttHistory.close()">✕</button></div>
@@ -611,66 +507,52 @@ const HodAttHistory = {
           <div class="modal-header"><span id="hodAttSessionTitle">Lecture Details</span><button onclick="HodAttHistory.closeSession()">✕</button></div>
           <div class="modal-body" id="hodAttSessionBody" style="overflow-y:auto;padding:16px"></div>
         </div>
-      </div>`,
-    );
+      </div>`);
   },
 
   _renderList(sessions) {
-    const body = document.getElementById("hodAttHistoryBody");
+    const body = document.getElementById('hodAttHistoryBody');
     if (!sessions.length) {
       body.innerHTML = `<p style="text-align:center;color:var(--muted,#888);padding:24px">No attendance submitted by any teacher yet.</p>`;
       return;
     }
-    body.innerHTML = sessions
-      .map(
-        (s) => `
+    body.innerHTML = sessions.map(s => `
       <div class="sched-slot-card" style="cursor:pointer" onclick="HodAttHistory.openSession('${s.sessionKey}')">
-        <div class="ssc-time"><b>${fmtDate(s.date)}</b>${s.time ? "<br>" + s.time : ""}</div>
+        <div class="ssc-time"><b>${fmtDate(s.date)}</b>${s.time ? '<br>' + s.time : ''}</div>
         <div class="ssc-info">
-          <span><b>${escHtml(s.subjectName || "")}</b> — ${escHtml(s.teacherName)}</span>
-          <span>${escHtml(s.course || "")} Sem ${s.semester || ""}${s.division ? " · " + escHtml(s.division) : ""}</span>
+          <span><b>${escHtml(s.subjectName || '')}</b> — ${escHtml(s.teacherName)}</span>
+          <span>${escHtml(s.course || '')} Sem ${s.semester || ''}${s.division ? ' · ' + escHtml(s.division) : ''}</span>
           <span>✅ ${s.present} &nbsp; ❌ ${s.absent}</span>
         </div>
-      </div>`,
-      )
-      .join("");
+      </div>`).join('');
   },
 
   async openSession(sessionKey) {
-    document.getElementById("hodAttSessionOverlay").classList.add("open");
-    const body = document.getElementById("hodAttSessionBody");
-    body.innerHTML = "Loading…";
+    document.getElementById('hodAttSessionOverlay').classList.add('open');
+    const body = document.getElementById('hodAttSessionBody');
+    body.innerHTML = 'Loading…';
     try {
-      const d = await apiJson(
-        "/api/hod/attendance/session/" + encodeURIComponent(sessionKey),
-      );
+      const d = await apiJson('/api/hod/attendance/session/' + encodeURIComponent(sessionKey));
       this._sessionKey = sessionKey;
       this._records = d.records;
-      document.getElementById("hodAttSessionTitle").textContent =
-        `${d.meta.subjectName} — ${d.meta.teacherName}`;
-      const uploadedAt = d.meta.uploadedAt
-        ? fmtDateTime(d.meta.uploadedAt)
-        : null;
+      document.getElementById('hodAttSessionTitle').textContent = `${d.meta.subjectName} — ${d.meta.teacherName}`;
+      const uploadedAt = d.meta.uploadedAt ? fmtDateTime(d.meta.uploadedAt) : null;
       body.innerHTML = `
         <p style="color:var(--muted,#888);font-size:13px;margin-bottom:10px">
-          ${d.meta.course} Sem ${d.meta.semester}${d.meta.division ? " · " + escHtml(d.meta.division) : ""} ·
+          ${d.meta.course} Sem ${d.meta.semester}${d.meta.division ? ' · ' + escHtml(d.meta.division) : ''} ·
           Taken by <b>${escHtml(d.meta.teacherName)}</b> — editing here updates this lecture only.
         </p>
         <div id="hodAttSessionSeats" style="display:flex;flex-direction:column;gap:6px">
-          ${d.records
-            .map(
-              (r, i) => `
-            <div class="seat${r.status === "absent" ? " absent" : ""}" data-idx="${i}"
+          ${d.records.map((r, i) => `
+            <div class="seat${r.status === 'absent' ? ' absent' : ''}" data-idx="${i}"
                  style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:10px 12px;cursor:pointer"
                  onclick="HodAttHistory.toggleStatus(${i})">
-              <span>${escHtml(r.student?.name || "Unknown")} <span style="opacity:.7;font-size:12px">${escHtml(r.student?.roll || r.student?.rollNo || "")}</span></span>
-              <b>${r.status === "absent" ? "Absent" : "Present"}</b>
-            </div>`,
-            )
-            .join("")}
+              <span>${escHtml(r.student?.name || 'Unknown')} <span style="opacity:.7;font-size:12px">${escHtml(r.student?.roll || r.student?.rollNo || '')}</span></span>
+              <b>${r.status === 'absent' ? 'Absent' : 'Present'}</b>
+            </div>`).join('')}
         </div>
         <button class="btn btn-primary" style="margin-top:14px;width:100%" onclick="HodAttHistory.save()">Save Changes</button>
-        ${uploadedAt ? `<div style="font-size:11px;color:var(--muted,#888);margin-top:10px">Lecture date: ${fmtDate(d.meta.date)} · Uploaded ${uploadedAt}</div>` : ""}
+        ${uploadedAt ? `<div style="font-size:11px;color:var(--muted,#888);margin-top:10px">Lecture date: ${fmtDate(d.meta.date)} · Uploaded ${uploadedAt}</div>` : ''}
       `;
     } catch (e) {
       body.innerHTML = `<p style="color:var(--danger)">${e.message}</p>`;
@@ -680,36 +562,26 @@ const HodAttHistory = {
   toggleStatus(idx) {
     if (!this._records || !this._records[idx]) return;
     const r = this._records[idx];
-    r.status = r.status === "present" ? "absent" : "present";
-    const el = document.querySelector(
-      `#hodAttSessionSeats .seat[data-idx="${idx}"]`,
-    );
+    r.status = r.status === 'present' ? 'absent' : 'present';
+    const el = document.querySelector(`#hodAttSessionSeats .seat[data-idx="${idx}"]`);
     if (el) {
-      el.classList.toggle("absent", r.status === "absent");
-      el.querySelector("b").textContent =
-        r.status === "absent" ? "Absent" : "Present";
+      el.classList.toggle('absent', r.status === 'absent');
+      el.querySelector('b').textContent = r.status === 'absent' ? 'Absent' : 'Present';
     }
   },
 
   async save() {
     if (!this._sessionKey || !this._records) return;
     try {
-      const payload = this._records.map((r) => ({
-        student: r.student?._id || r.student,
-        status: r.status,
-      }));
-      const d = await apiJson(
-        "/api/hod/attendance/session/" + encodeURIComponent(this._sessionKey),
-        {
-          method: "PUT",
-          body: JSON.stringify({ records: payload }),
-        },
-      );
-      showToast(d.message || "Attendance updated.");
+      const payload = this._records.map(r => ({ student: r.student?._id || r.student, status: r.status }));
+      const d = await apiJson('/api/hod/attendance/session/' + encodeURIComponent(this._sessionKey), {
+        method: 'PUT', body: JSON.stringify({ records: payload })
+      });
+      showToast(d.message || 'Attendance updated.');
       this.closeSession();
       this.open();
     } catch (e) {
-      showToast(e.message || "Failed to save changes.", true);
+      showToast(e.message || 'Failed to save changes.', true);
     }
   },
 };

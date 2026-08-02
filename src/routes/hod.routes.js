@@ -1518,11 +1518,57 @@ router.get(
   asyncHandler(async (req, res) => {
     const filter = scope(req);
     if (req.query.studentId) filter.student = req.query.studentId;
+    // NOTE: previously accepted but silently ignored ?examType — the
+    // frontend (hod/js/marks.js fetchExistingMarks) already sends this and
+    // was filtering client-side, but applying it here too cuts payload size
+    // for departments with a lot of exam history.
+    if (req.query.examType) filter.examType = req.query.examType;
     ok(res, {
       marks: await Mark.find(filter)
         .populate("student", "name roll")
         .populate("subject", "name code"),
     });
+  }),
+);
+
+// PATCH /api/hod/marks/publish — HOD's own "send marks to students" control.
+// Unlike the teacher/CC version (scoped to their own subject or their CC
+// semester), the HOD can publish/unpublish ANY exam sheet in their
+// department — useful for a Class-Coordinator-created sheet the HOD wants
+// to release (or pull back) on the CC's behalf.
+router.patch(
+  "/marks/publish",
+  asyncHandler(async (req, res) => {
+    const { course, examType, subjectIds } = req.body;
+    const semester = Number(req.body.semester);
+    const publish = req.body.publish !== false;
+    if (!course || !semester || !examType)
+      return fail(res, 400, "course, semester and examType are required.");
+
+    const subjectFilter = { ...scope(req), course, semester };
+    const subjects = await Subject.find(subjectFilter).select("_id").lean();
+    let subjectIdList = subjects.map((s) => String(s._id));
+    if (Array.isArray(subjectIds) && subjectIds.length) {
+      subjectIdList = subjectIdList.filter((id) => subjectIds.includes(id));
+    }
+    if (!subjectIdList.length)
+      return fail(res, 404, "No subjects found for this course/semester.");
+
+    const result = await Mark.updateMany(
+      { ...scope(req), subject: { $in: subjectIdList }, examType },
+      {
+        $set: publish
+          ? { published: true, publishedAt: new Date(), publishedBy: req.user.id }
+          : { published: false },
+      },
+    );
+    ok(
+      res,
+      { matched: result.matchedCount, modified: result.modifiedCount, published: publish },
+      publish
+        ? `Marks sent to ${result.modifiedCount} student record(s).`
+        : `Marks withdrawn from ${result.modifiedCount} student record(s).`,
+    );
   }),
 );
 router.post(

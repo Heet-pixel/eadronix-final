@@ -1,6 +1,7 @@
 import { Router } from "express";
 import Student from "../models/Student.js";
 import Schedule from "../models/Schedule.js";
+import Mark from "../models/Mark.js";
 import { requireAuth, allowRoles } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { fail, ok } from "../utils/respond.js";
@@ -395,13 +396,34 @@ router.get(
     const bySubject = {};
     for (const m of marks) {
       const key = String(m.subject?._id || m.subject || m.subjectName);
-      const name = m.subject?.name || m.subjectName || "Unknown";
-      if (!bySubject[key]) bySubject[key] = { name, exams: [] };
+      if (!bySubject[key]) {
+        bySubject[key] = {
+          subject: { _id: m.subject?._id, name: m.subject?.name || m.subjectName || "Unknown", code: m.subject?.code || "" },
+          exams: [],
+          totalObtained: 0,
+          totalMax: 0,
+        };
+      }
+      const hasNumericMark = typeof m.marks === "number";
       bySubject[key].exams.push({
+        name: m.examType,
         examType: m.examType,
+        marksObtained: m.marks,
+        totalMarks: m.maxMarks,
         marks: m.marks,
         maxMarks: m.maxMarks,
+        date: m.updatedAt,
+        image: m.image || "",
+        imageUploadedAt: m.imageUploadedAt || null,
+        published: !!m.published,
+        enteredBy: m.enteredBy || "teacher",
       });
+      // Only a real teacher-entered number counts toward the subject total —
+      // a screenshot-only row (no number yet) shouldn't skew the percentage.
+      if (hasNumericMark) {
+        bySubject[key].totalObtained += m.marks;
+        bySubject[key].totalMax += m.maxMarks || 100;
+      }
     }
     ok(res, {
       success: true,
@@ -409,6 +431,70 @@ router.get(
       marks,
       bySubject: Object.values(bySubject),
     });
+  }),
+);
+
+// POST /api/student/marks/upload-image — a student self-reports a subject's
+// marks by uploading a screenshot of their own marksheet, instead of (or
+// alongside) a number the teacher/CC types in. This is always allowed —
+// it's the student's own submission — and is always visible to that
+// student immediately (see the `published` filter in studentBundle(),
+// controllers/common.js), even before any teacher/CC has "sent" marks.
+// Body: { subjectId, examType, image: "data:image/...;base64,..." }
+router.post(
+  "/marks/upload-image",
+  asyncHandler(async (req, res) => {
+    const student = await currentStudent(req, res);
+    if (!student) return;
+    if (req.user.role !== "student")
+      return fail(res, 403, "Only the student can upload their own marksheet.");
+
+    const { subjectId, examType } = req.body;
+    if (!subjectId || !examType)
+      return fail(res, 400, "subjectId and examType are required.");
+
+    let image;
+    try {
+      image = validateImageDataUri(req.body.image);
+    } catch (e) {
+      return fail(res, e.status || 400, e.message);
+    }
+    if (!image) return fail(res, 400, "An image is required.");
+
+    const storedUrl = await storeDataUri(
+      image,
+      `mark-${student._id}-${subjectId}-${examType}`,
+    );
+
+    const mark = await Mark.findOneAndUpdate(
+      {
+        student: student._id,
+        subject: subjectId,
+        examType,
+        college: student.college,
+        department: student.department,
+        isDeleted: false,
+      },
+      {
+        $set: {
+          image: storedUrl,
+          imageUploadedAt: new Date(),
+          enteredBy: "student",
+          updatedBy: req.user.id,
+        },
+        $setOnInsert: {
+          student: student._id,
+          subject: subjectId,
+          examType,
+          college: student.college,
+          department: student.department,
+          createdBy: req.user.id,
+        },
+      },
+      { upsert: true, new: true },
+    ).populate("subject", "name code");
+
+    ok(res, { success: true, mark }, "Marksheet uploaded.");
   }),
 );
 

@@ -61,7 +61,7 @@
       <div class="nav-label">Academics</div>
       <div class="nav-item" data-page="markattendance" onclick="showSection('markattendance')"><div class="ni-icon">📋</div>Mark Attendance</div>
       <div class="nav-item" data-page="schedule" onclick="showSection('schedule')"><div class="ni-icon">📄</div>Schedule</div>
-      <div class="nav-item" data-page="marksupload" onclick="showSection('marksupload')"><div class="ni-icon">📄</div>Upload Marks</div>
+      <!-- <div class="nav-item" data-page="marksupload" onclick="showSection('marksupload')"><div class="ni-icon">📄</div>Upload Marks</div> -->
       <div class="nav-item" data-page="reports" onclick="showSection('reports')"><div class="ni-icon">📚</div>Reports</div>
     </div>
     <div class="nav-group">
@@ -137,7 +137,13 @@
     <div id="marksupload" class="section">
       <div class="sec-hdr"><h2>Upload Marks</h2><p>Upload Mid-Semester &amp; Internal/GUT exam marks for your department</p></div>
       <div id="marksUploadContent"></div>
+      <!-- Class Coordinator / teacher-named exam sheets (e.g. "Unit Test 2"),
+           built via the teacher/CC portal's Add Marks page. Separate from the
+           Mid-Sem/GUT Excel workflow above since it covers any exam name and
+           shows student-uploaded proof screenshots + publish status. -->
+      <div id="ccSheetPanel" style="margin-top:24px"></div>
     </div>
+
 
     <!-- REPORTS -->
     <div id="reports" class="section">

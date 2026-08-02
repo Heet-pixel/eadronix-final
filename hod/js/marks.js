@@ -151,6 +151,166 @@ function setMarksCourse(c){ marksCourse=c; marksSem=''; renderMarksUpload(); }
 function setMarksSem(s){ marksSem=s; loadMarksForSelection(); }
 function setMarksType(t){ marksType=t; if(marksCourse && marksSem) loadMarksForSelection(); else renderMarksUpload(); }
 
+/* ═══════════════════════════════════════════════════════
+   CLASS COORDINATOR / CUSTOM-NAMED EXAM SHEETS
+   Separate from the Mid-Sem/GUT Excel workflow above — these are the
+   arbitrarily-named sheets (e.g. "Unit Test 2") created from the teacher
+   or Class Coordinator's "Add Marks" page. Read/publish only from here;
+   HOD doesn't type marks in directly (that stays with the teacher/CC),
+   but can view every subject + any student-uploaded proof screenshot, and
+   can publish/unpublish on the CC's behalf.
+═════════════════════════════════════════════════════════ */
+let ccCourse = '';
+let ccSem = '';
+let ccExamType = '';
+let ccSheetSubjects = [];
+let ccSheetStudents = [];
+let ccSheetMarks = [];
+let ccSheetLoading = false;
+
+function renderCCSheetPanel(){
+  const el = document.getElementById('ccSheetPanel');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="marks-selector-card">
+      <h3>🧑‍🏫 Class Coordinator / Custom Exam Sheets</h3>
+      <p style="font-size:12px;color:var(--muted,#5c6480);margin:-6px 0 12px;">
+        View any sheet a teacher or Class Coordinator has created from their own Add Marks page —
+        works for any exam name, not just Mid-Sem/GUT. Also shows students' self-uploaded marksheet
+        screenshots, and lets you send (publish) or withdraw the results.
+      </p>
+      <div class="marks-select-row">
+        <div class="ms-group">
+          <label>Course</label>
+          <select onchange="setCCCourse(this.value)">
+            <option value="">-- Select Course --</option>
+            ${HOD_COURSES.map(c=>`<option value="${c}" ${ccCourse===c?'selected':''}>${c}</option>`).join('')}
+          </select>
+        </div>
+        <div class="ms-group">
+          <label>Semester</label>
+          <select onchange="setCCSem(this.value)" ${!ccCourse?'disabled':''}>
+            <option value="">-- Select Semester --</option>
+            ${ccCourse ? Array.from({length:SEM_COUNT},(_,i)=>`<option value="${i+1}" ${ccSem==i+1?'selected':''}>Semester ${i+1}</option>`).join('') : ''}
+          </select>
+        </div>
+        <div class="ms-group">
+          <label>Exam / test name</label>
+          <input type="text" id="ccExamTypeInput" placeholder="e.g. Unit Test 2" value="${ccExamType}"
+            onchange="setCCExamType(this.value)" ${!ccCourse||!ccSem?'disabled':''}>
+        </div>
+      </div>
+    </div>
+    <div id="ccSheetTableWrap"></div>
+  `;
+  renderCCSheetTable();
+}
+
+function setCCCourse(c){ ccCourse=c; ccSem=''; ccExamType=''; ccSheetSubjects=[]; ccSheetStudents=[]; ccSheetMarks=[]; renderCCSheetPanel(); }
+function setCCSem(s){ ccSem=s; ccExamType=''; ccSheetSubjects=[]; ccSheetStudents=[]; ccSheetMarks=[]; renderCCSheetPanel(); }
+function setCCExamType(v){
+  ccExamType = (v || '').trim();
+  if (ccCourse && ccSem && ccExamType) loadCCSheet();
+  else renderCCSheetTable();
+}
+
+async function loadCCSheet(){
+  ccSheetLoading = true;
+  renderCCSheetTable();
+  try {
+    ccSheetSubjects = getSubjObjects(ccCourse, parseInt(ccSem));
+    ccSheetStudents = allStudents.filter(s => s.course === ccCourse && String(s.sem) === String(ccSem));
+    if (!ccSheetSubjects.length || !ccSheetStudents.length) {
+      ccSheetMarks = [];
+      return;
+    }
+    const data = await apiJson(`/api/hod/marks?examType=${encodeURIComponent(ccExamType)}`);
+    const subjIds = new Set(ccSheetSubjects.filter(s=>s.id).map(s=>String(s.id)));
+    const stuIds  = new Set(ccSheetStudents.map(s=>String(s.id||s._id)));
+    ccSheetMarks = (data.marks || []).filter(m => {
+      const sid = String(m.subject?._id || m.subject || '');
+      const stid = String(m.student?._id || m.student || '');
+      return subjIds.has(sid) && stuIds.has(stid);
+    });
+  } catch (e) {
+    showToast('Failed to load sheet: ' + e.message, true);
+    ccSheetMarks = [];
+  } finally {
+    ccSheetLoading = false;
+    renderCCSheetTable();
+  }
+}
+
+function renderCCSheetTable(){
+  const wrap = document.getElementById('ccSheetTableWrap');
+  if (!wrap) return;
+  if (!ccCourse || !ccSem || !ccExamType) {
+    wrap.innerHTML = `<div class="empty-state" style="margin-top:10px;"><div class="e-icon">🧑‍🏫</div><p>Select course, semester &amp; type an exam name to load a sheet.</p></div>`;
+    return;
+  }
+  if (ccSheetLoading) {
+    wrap.innerHTML = `<div class="empty-state" style="margin-top:10px;"><div class="e-icon">⏳</div><p>Loading…</p></div>`;
+    return;
+  }
+  if (!ccSheetSubjects.length || !ccSheetStudents.length) {
+    wrap.innerHTML = `<div class="empty-state" style="margin-top:10px;"><div class="e-icon">📄</div><p>No subjects/students found for ${ccCourse} Sem ${ccSem}.</p></div>`;
+    return;
+  }
+
+  const byKey = {};
+  ccSheetMarks.forEach(m => {
+    const sid = String(m.subject?._id || m.subject || '');
+    const stid = String(m.student?._id || m.student || '');
+    byKey[`${stid}__${sid}`] = m;
+  });
+
+  const anyPublished = ccSheetMarks.some(m => m.published);
+  const anyRows = ccSheetMarks.length > 0;
+
+  const head = `
+    <tr>
+      <th style="text-align:left">Student</th>
+      ${ccSheetSubjects.map(s=>`<th>${s.name}</th>`).join('')}
+    </tr>`;
+  const rows = ccSheetStudents.map(stu => {
+    const cells = ccSheetSubjects.map(subj => {
+      const m = subj.id ? byKey[`${stu.id||stu._id}__${subj.id}`] : null;
+      if (!m) return `<td style="color:var(--muted2,#9aa3bf)">—</td>`;
+      const hasNum = typeof m.marks === 'number';
+      const proof = m.image ? `<a href="${m.image}" target="_blank" title="View student-uploaded screenshot">🖼️</a>` : '';
+      const pub = m.published ? '<span style="color:var(--green,#16a34a);font-weight:900" title="Sent to student">✓</span>' : '<span style="color:var(--yellow,#d97706)" title="Not sent yet">•</span>';
+      return `<td>${hasNum ? m.marks : (proof ? 'Uploaded' : '—')} ${proof} ${pub}</td>`;
+    }).join('');
+    return `<tr><td style="text-align:left">${stu.name}<br><small style="color:var(--muted2,#9aa3bf)">${stu.roll||''}</small></td>${cells}</tr>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <div class="marks-selector-card">
+      <table class="marks-table" style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>${head}</thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="marks-action-row" style="margin-top:14px">
+        <button class="btn btn-success" onclick="ccSheetPublish(true)" ${!anyRows?'disabled':''}>📤 Send to Students</button>
+        <button class="btn btn-ghost" onclick="ccSheetPublish(false)" ${!anyRows?'disabled':''}>↩️ Unpublish</button>
+        ${anyRows ? `<span style="margin-left:10px;font-size:12px;color:var(--muted,#5c6480)">${anyPublished ? 'Some/all rows already sent.' : 'Not sent to students yet.'}</span>` : ''}
+      </div>
+    </div>`;
+}
+
+async function ccSheetPublish(publish){
+  try {
+    const res = await apiJson('/api/hod/marks/publish', {
+      method: 'PATCH',
+      body: JSON.stringify({ course: ccCourse, semester: Number(ccSem), examType: ccExamType, publish }),
+    });
+    showToast(res.message || (publish ? 'Marks sent.' : 'Marks unpublished.'));
+    loadCCSheet();
+  } catch (e) {
+    showToast('Failed: ' + e.message, true);
+  }
+}
+
 function downloadMarksTemplate(){
   if(!marksCourse||!marksSem){showToast('Please select course and semester.',true);return;}
   let subjects = getSubjNames(marksCourse, parseInt(marksSem));

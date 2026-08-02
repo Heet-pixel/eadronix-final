@@ -1289,3 +1289,120 @@ textarea {
 .notice-card a { color: var(--accent); font-weight: 600; text-decoration: none; }
 .notice-card a:hover { text-decoration: underline; }
 p.empty { font-size: 13px; color: var(--muted2); padding: 10px 0; }
+
+/* ── Add Marks page ──────────────────────────────────────────── */
+.cc-note {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--blue-bg);
+  color: var(--blue);
+  font-size: 12.5px;
+  font-weight: 700;
+  border: 1px solid var(--blue-br);
+}
+.cc-note--active {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-color: var(--accent-br);
+}
+.marks-grid-scroll {
+  overflow-x: auto;
+  margin-bottom: 16px;
+}
+.marks-grid-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.marks-grid-table th,
+.marks-grid-table td {
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  text-align: center;
+  white-space: nowrap;
+}
+.marks-grid-table th {
+  background: var(--surface2);
+  font-weight: 800;
+}
+.marks-grid-th-student,
+.marks-grid-td-student {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  background: var(--surface);
+  z-index: 1;
+}
+.marks-grid-code {
+  font-size: 10px;
+  color: var(--muted2);
+  font-weight: 500;
+}
+.marks-grid-roll {
+  font-size: 11px;
+  color: var(--muted2);
+  font-weight: 500;
+}
+.marks-grid-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.marks-grid-input {
+  width: 56px;
+  padding: 6px 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  text-align: center;
+  background: var(--surface2);
+  color: var(--text);
+  font-weight: 700;
+  font-size: 13px;
+}
+.marks-grid-proof {
+  text-decoration: none;
+  font-size: 14px;
+}
+.marks-grid-pub {
+  color: var(--green);
+  font-weight: 900;
+}
+
+/* ── Attendance History redesign (CC switcher + stat-bar cards) ─────── */
+.att-hist-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.ahs-btn {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ahs-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.ahs-btn.cc.active {
+  background: var(--accent);
+}
+.att-hist-card {
+  cursor: pointer;
+  align-items: flex-start;
+}
+.att-ctr-row {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+}
+.att-ctr.sm .ac-val { font-size: 16px; }
+.att-ctr.sm .ac-lbl { font-size: 9px; }

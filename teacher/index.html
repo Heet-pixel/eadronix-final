@@ -46,6 +46,9 @@
     <button class="sn-item" id="sni-attendance" onclick="goToPage('attendance'); closeSidebar()">
       <span class="sn-icon">✅</span> Mark Attendance
     </button>
+    <!-- <button class="sn-item" id="sni-marks" onclick="goToPage('marks'); closeSidebar()">
+      <span class="sn-icon">📝</span> Add Marks
+    </button> -->
     <div class="nav-section-label" style="margin-top:8px">Resources</div>
     <button class="sn-item" id="sni-syllabus" onclick="goToPage('syllabus'); closeSidebar()">
       <span class="sn-icon">📚</span> Upload Syllabus
@@ -323,6 +326,63 @@
       </div>
     </div>
 
+    <!-- ━━━━━━━━━ PAGE: MARKS ━━━━━━━━━ -->
+    <div class="page" id="page-marks">
+      <div class="page-header">
+        <div class="page-title">Add Marks</div>
+        <div class="page-subtitle" id="marksSubtitle">Select class &amp; exam to view or enter marks</div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd">🎓 Select Class &amp; Exam</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Course</label>
+            <select id="marksCourse" onchange="Marks.onClassChange()">
+              <option value="">— Course —</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Semester</label>
+            <select id="marksSem" onchange="Marks.onClassChange()">
+              <option value="">— Sem —</option>
+              <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Exam / test name</label>
+            <input type="text" id="marksExamType" placeholder="e.g. Mid Sem 1, Unit Test 2" oninput="Marks.onExamTypeChange()">
+          </div>
+        </div>
+        <div id="marksAccessNote" class="cc-note" style="display:none"></div>
+      </div>
+
+      <div id="marksGridSec" style="display:none">
+        <div class="card">
+          <div class="card-hd">
+            📝 Marks Grid
+            <span class="card-hd-sub" id="marksGridSub"></span>
+          </div>
+          <div class="marks-grid-scroll">
+            <table class="marks-grid-table" id="marksGridTable"></table>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-accent" onclick="Marks.save()">💾 Save Marks</button>
+            <button class="btn btn-success" onclick="Marks.publish(true)">📤 Send Marks to Students</button>
+            <button class="btn btn-ghost" onclick="Marks.publish(false)">↩️ Unpublish</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="marksPlaceholder" style="text-align:center;padding:52px 20px">
+        <div style="font-size:52px;margin-bottom:14px">📝</div>
+        <div style="font-size:15px;font-weight:700;color:var(--muted)">Select course, semester &amp; exam name above</div>
+        <div style="font-size:12px;color:var(--muted2);margin-top:6px;font-weight:600">to load the marks grid</div>
+      </div>
+    </div>
+
     <!-- ━━━━━━━━━ PAGE: SYLLABUS ━━━━━━━━━ -->
     <div class="page" id="page-syllabus">
       <div class="page-header">
@@ -530,6 +590,7 @@
 <script src="js/dashboard.js"></script>
 <script src="js/students.js"></script>
 <script src="js/attendance.js"></script>
+<script src="js/marks.js"></script>
 <script src="js/syllabus.js"></script>
 <script src="js/schedule.js"></script>
 <script src="js/notices.js"></script>

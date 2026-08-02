@@ -28,6 +28,26 @@ const MarkSchema = new mongoose.Schema(
     maxMarks:    { type: Number, default: 100 },
     college:     { type: mongoose.Schema.Types.ObjectId, ref: 'College' },
     department:  { type: mongoose.Schema.Types.ObjectId, ref: 'Department' },
+
+    // ── Class Coordinator marks-sheet feature ──────────────────────────────
+    // `image`: a GridFS/S3-backed URL (see utils/gridfs.js storeDataUri) — a
+    // screenshot of the student's own marksheet, uploaded by the STUDENT
+    // themselves as an alternative/supplement to a teacher typing a number.
+    image:          { type: String, default: '' },
+    imageUploadedAt: Date,
+    // Who actually put the value in this row: the teacher/CC typed a number,
+    // or the student self-reported by uploading a screenshot.
+    enteredBy:      { type: String, enum: ['teacher', 'student'], default: 'teacher' },
+    // `published`: the CC/teacher's "send marks to student" toggle. Teacher-
+    // entered numeric marks stay hidden from the student's own marks view
+    // until this is true. A student's OWN self-uploaded image is always
+    // visible to that student regardless of this flag (see studentBundle()
+    // in controllers/common.js) — it's their own upload, not a result being
+    // withheld from them.
+    published:      { type: Boolean, default: false },
+    publishedAt:    Date,
+    publishedBy:    { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+
     ...baseFields,
   },
   { timestamps: true }

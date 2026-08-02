@@ -6,6 +6,7 @@ function goToPage(id) {
   if (id === 'schedule')      renderSchedulePage();
   if (id === 'announcements') Announcements.load();
   if (id === 'profile')       TeacherProfile.load();
+  if (id === 'marks')         Marks.init();
 }
 
 function goToStudents() {
