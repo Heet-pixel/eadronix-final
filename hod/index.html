@@ -1,404 +1,531 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="icon" type="image/png" href="logo.png">
-<link rel="apple-touch-icon" href="logo.png">
-<title>Admin Panel — Eadronix</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="apple-touch-icon" href="logo.png">
+  <title>Admin Panel — Eadronix</title>
 
-<!-- Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+  <!-- Fonts -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap"
+    rel="stylesheet">
 
-<!-- External Libraries -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- External Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-<!-- Styles -->
-<link rel="stylesheet" href="css/style.css">
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/style.css">
 
-<!-- Auth Guard — runs immediately before DOM -->
-<script src="js/auth.js"></script>
+  <!-- Auth Guard — runs immediately before DOM -->
+  <script src="js/auth.js"></script>
 </head>
 </head>
+
 <body>
 
-<!-- SIDEBAR MOBILE OVERLAY -->
-<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
+  <!-- SIDEBAR MOBILE OVERLAY -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
 
-<!-- ═════════ SIDEBAR ═════════ -->
-<div class="sidebar" id="mainSidebar">
-  <div class="brand">
-    <img src="logo.png" class="brand-logo" alt="Eadronix Logo">
-    <div class="brand-text">
-    <div class="brand-name">Eadronix</div>
-    <div class="brand-tag">ADMIN Portal</div>
-  </div>
-</div>
-  <div class="hod-info">
-    <div style="display:flex;align-items:center;gap:12px;">
-      <div class="hod-avatar" id="sidebarAvatar"></div>
-      <div>
-        <div class="hod-name" id="sidebarName">HOD Name</div>
-        <div class="hod-dept" id="sidebarDept">Department</div>
+  <!-- ═════════ SIDEBAR ═════════ -->
+  <div class="sidebar" id="mainSidebar">
+    <div class="brand">
+      <img src="logo.png" class="brand-logo" alt="Eadronix Logo">
+      <div class="brand-text">
+        <div class="brand-name">Eadronix</div>
+        <div class="brand-tag">ADMIN Portal</div>
       </div>
     </div>
-    <div class="hod-badge">Head of Department</div>
+    <div class="hod-info">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="hod-avatar" id="sidebarAvatar"></div>
+        <div>
+          <div class="hod-name" id="sidebarName">HOD Name</div>
+          <div class="hod-dept" id="sidebarDept">Department</div>
+        </div>
+      </div>
+      <div class="hod-badge">Head of Department</div>
+    </div>
+    <nav>
+      <div class="nav-group">
+        <div class="nav-label">Overview</div>
+        <div class="nav-item active" data-page="dashboard" onclick="showSection('dashboard')">
+          <div class="ni-icon">🏠</div>Dashboard
+        </div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Management</div>
+        <div class="nav-item" data-page="students" onclick="showSection('students')">
+          <div class="ni-icon">🎓</div>Students
+        </div>
+        <div class="nav-item" data-page="teachers" onclick="showSection('teachers')">
+          <div class="ni-icon">🧑‍🏫</div>Teachers
+        </div>
+        <!-- <div class="nav-item" data-page="cc" onclick="showSection('cc')"><div class="ni-icon">📋</div>Class Coordinator</div> -->
+        <!-- <div class="nav-item" data-page="courses" onclick="showSection('courses')"><div class="ni-icon">📚</div>Courses & Depts</div> -->
+        <div class="nav-item" data-page="subjects" onclick="showSection('subjects')">
+          <div class="ni-icon">📖</div>Subjects
+        </div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Academics</div>
+        <div class="nav-item" data-page="markattendance" onclick="showSection('markattendance')">
+          <div class="ni-icon">📋</div>Mark Attendance
+        </div>
+        <div class="nav-item" data-page="schedule" onclick="showSection('schedule')">
+          <div class="ni-icon">📄</div>Schedule
+        </div>
+        <!-- <div class="nav-item" data-page="marksupload" onclick="showSection('marksupload')"><div class="ni-icon">📄</div>Upload Marks</div> -->
+        <div class="nav-item" data-page="reports" onclick="showSection('reports')">
+          <div class="ni-icon">📚</div>Reports
+        </div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Communication</div>
+        <div class="nav-item" data-page="announcement" onclick="showSection('announcement')">
+          <div class="ni-icon">📄</div>Announcements
+        </div>
+        <!-- <div class="nav-item" data-page="cohodhistory" onclick="showSection('cohodhistory')"><div class="ni-icon">🕒</div>Co-HOD History</div> -->
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Account</div>
+        <div class="nav-item" data-page="profile" onclick="showSection('profile')">
+          <div class="ni-icon">👤</div>Profile
+        </div>
+      </div>
+      <div class="nav-item logout-btn" onclick="logoutUser()">
+        <div class="ni-icon">🚪</div>
+        Logout
+      </div>
+    </nav>
   </div>
-  <nav>
-    <div class="nav-group">
-      <div class="nav-label">Overview</div>
-      <div class="nav-item active" data-page="dashboard" onclick="showSection('dashboard')"><div class="ni-icon">🏠</div>Dashboard</div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-label">Management</div>
-      <div class="nav-item" data-page="students" onclick="showSection('students')"><div class="ni-icon">🎓</div>Students</div>
-      <div class="nav-item" data-page="teachers" onclick="showSection('teachers')"><div class="ni-icon">🧑‍🏫</div>Teachers</div>
-      <div class="nav-item" data-page="cc" onclick="showSection('cc')"><div class="ni-icon">📋</div>Class Coordinator</div>
-      <!-- <div class="nav-item" data-page="courses" onclick="showSection('courses')"><div class="ni-icon">📚</div>Courses & Depts</div> -->
-      <div class="nav-item" data-page="subjects" onclick="showSection('subjects')"><div class="ni-icon">📖</div>Subjects</div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-label">Academics</div>
-      <div class="nav-item" data-page="markattendance" onclick="showSection('markattendance')"><div class="ni-icon">📋</div>Mark Attendance</div>
-      <div class="nav-item" data-page="schedule" onclick="showSection('schedule')"><div class="ni-icon">📄</div>Schedule</div>
-      <!-- <div class="nav-item" data-page="marksupload" onclick="showSection('marksupload')"><div class="ni-icon">📄</div>Upload Marks</div> -->
-      <div class="nav-item" data-page="reports" onclick="showSection('reports')"><div class="ni-icon">📚</div>Reports</div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-label">Communication</div>
-      <div class="nav-item" data-page="announcement" onclick="showSection('announcement')"><div class="ni-icon">📄</div>Announcements</div>
-      <!-- <div class="nav-item" data-page="cohodhistory" onclick="showSection('cohodhistory')"><div class="ni-icon">🕒</div>Co-HOD History</div> -->
-    </div>
-    <div class="nav-group">
-      <div class="nav-label">Account</div>
-      <div class="nav-item" data-page="profile" onclick="showSection('profile')"><div class="ni-icon">👤</div>Profile</div>
-    </div>
-    <div class="nav-item logout-btn" onclick="logoutUser()">
-  <div class="ni-icon">🚪</div>
-  Logout
-</div>
-  </nav>
   </div>
-</div>
 
-<!-- ═════════ MAIN ═════════ -->
-<div class="main">
-  <!-- TOPBAR -->
-  <div class="topbar">
-    <div class="topbar-left" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
-      <div class="hamburger" id="hamburgerBtn" onclick="toggleMobileSidebar()">☰</div>
-      <div style="min-width:0;">
-        <h1 id="topTitle" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Dashboard</h1>
-        <p id="topSub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Department overview</p>
+  <!-- ═════════ MAIN ═════════ -->
+  <div class="main">
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="topbar-left" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+        <div class="hamburger" id="hamburgerBtn" onclick="toggleMobileSidebar()">☰</div>
+        <div style="min-width:0;">
+          <h1 id="topTitle" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Dashboard</h1>
+          <p id="topSub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Department overview</p>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="tb-chip" id="topDate"></div>
+        <div class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode" id="themeToggleBtn">🌙</div>
       </div>
     </div>
-    <div class="topbar-right">
-      <div class="tb-chip" id="topDate"></div>
-      <div class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode" id="themeToggleBtn">🌙</div>
-    </div>
-  </div>
 
-  <div class="page-content">
+    <div class="page-content">
 
-    <!-- DASHBOARD -->
-    <div id="dashboard" class="section active">
-      <div id="dashCards"></div>
-    </div>
+      <!-- DASHBOARD -->
+      <div id="dashboard" class="section active">
+        <div id="dashCards"></div>
+      </div>
 
-    <!-- STUDENTS -->
-    <div id="students" class="section">
-      <div class="sec-hdr"><h2>Students</h2><p>Manage department students</p></div>
-      <div id="stuCourseCards" class="course-picker"></div>
-      <div id="stuSemTabs" class="sem-tabs" style="display:none;"></div>
-      <div id="stuContent"></div>
-    </div>
+      <!-- STUDENTS -->
+      <div id="students" class="section">
+        <div class="sec-hdr">
+          <h2>Students</h2>
+          <p>Manage department students</p>
+        </div>
+        <div id="stuCourseCards" class="course-picker"></div>
+        <div id="stuSemTabs" class="sem-tabs" style="display:none;"></div>
+        <div id="stuContent"></div>
+      </div>
 
-    <!-- TEACHERS -->
-    <div id="teachers" class="section">
-      <div class="sec-hdr"><h2>Teachers</h2><p>Manage department faculty</p></div>
-      <div id="tchrCourseCards" class="course-picker"></div>
-      <div id="tchrContent"></div>
-    </div>
+      <!-- TEACHERS -->
+      <div id="teachers" class="section">
+        <div class="sec-hdr">
+          <h2>Teachers</h2>
+          <p>Manage department faculty</p>
+        </div>
+        <div id="tchrCourseCards" class="course-picker"></div>
+        <div id="tchrContent"></div>
+      </div>
 
-    <!-- ATTENDANCE -->
-    <!-- MARK ATTENDANCE (dedicated section) -->
-    <div id="markattendance" class="section">
-      <!-- <div class="sec-hdr"><h2>Mark Attendance</h2><p>View &amp; manage attendance records — mark present, absent or late for any class</p></div> -->
-      <div id="markAttContent"></div>
-    </div>
+      <!-- ATTENDANCE -->
+      <!-- MARK ATTENDANCE (dedicated section) -->
+      <div id="markattendance" class="section">
+        <!-- <div class="sec-hdr"><h2>Mark Attendance</h2><p>View &amp; manage attendance records — mark present, absent or late for any class</p></div> -->
+        <div id="markAttContent"></div>
+      </div>
 
-    <!-- SCHEDULE -->
-    <div id="schedule" class="section">
-      <div class="sec-hdr"><h2>Schedule</h2><p>Semester-wise subject schedule with timings</p></div>
-      <div class="schedule-outer" id="schedOuter"></div>
-    </div>
+      <!-- SCHEDULE -->
+      <div id="schedule" class="section">
+        <div class="sec-hdr">
+          <h2>Schedule</h2>
+          <p>Semester-wise subject schedule with timings</p>
+        </div>
+        <div class="schedule-outer" id="schedOuter"></div>
+      </div>
 
-    <!-- MARKS UPLOAD -->
-    <div id="marksupload" class="section">
-      <div class="sec-hdr"><h2>Upload Marks</h2><p>Upload Mid-Semester &amp; Internal/GUT exam marks for your department</p></div>
-      <div id="marksUploadContent"></div>
-      <!-- Class Coordinator / teacher-named exam sheets (e.g. "Unit Test 2"),
+      <!-- MARKS UPLOAD -->
+      <div id="marksupload" class="section">
+        <div class="sec-hdr">
+          <h2>Upload Marks</h2>
+          <p>Upload Mid-Semester &amp; Internal/GUT exam marks for your department</p>
+        </div>
+        <div id="marksUploadContent"></div>
+        <!-- Class Coordinator / teacher-named exam sheets (e.g. "Unit Test 2"),
            built via the teacher/CC portal's Add Marks page. Separate from the
            Mid-Sem/GUT Excel workflow above since it covers any exam name and
            shows student-uploaded proof screenshots + publish status. -->
-      <div id="ccSheetPanel" style="margin-top:24px"></div>
-    </div>
+        <div id="ccSheetPanel" style="margin-top:24px"></div>
+      </div>
 
 
-    <!-- REPORTS -->
-    <div id="reports" class="section">
-      <div class="sec-hdr"><h2>Reports</h2><p>Attendance, Marks &amp; Department reports — export to Excel</p></div>
-      <div id="reportContent"></div>
-    </div>
+      <!-- REPORTS -->
+      <div id="reports" class="section">
+        <div class="sec-hdr">
+          <h2>Reports</h2>
+          <p>Attendance, Marks &amp; Department reports — export to Excel</p>
+        </div>
+        <div id="reportContent"></div>
+      </div>
 
-    <!-- ANNOUNCEMENT -->
-    <div id="announcement" class="section">
-      <div class="sec-hdr"><h2>Announcements</h2><p>Send messages to students or teachers</p></div>
-      <div id="annContent"></div>
-    </div>
+      <!-- ANNOUNCEMENT -->
+      <div id="announcement" class="section">
+        <div class="sec-hdr">
+          <h2>Announcements</h2>
+          <p>Send messages to students or teachers</p>
+        </div>
+        <div id="annContent"></div>
+      </div>
 
-    <!-- CLASS COORDINATOR -->
-    <div id="cc" class="section">
-      <!-- <div class="sec-hdr"><h2>Class Coordinators</h2><p>Appoint CC for each semester — they can view all student marks &amp; attendance</p></div> -->
-      <div id="ccContent"></div>
-    </div>
+      <!-- CLASS COORDINATOR -->
+      <div id="cc" class="section">
+        <!-- <div class="sec-hdr"><h2>Class Coordinators</h2><p>Appoint CC for each semester — they can view all student marks &amp; attendance</p></div> -->
+        <div id="ccContent"></div>
+      </div>
 
-    <!-- COURSES & DEPARTMENTS -->
-    <div id="courses" class="section">
-      <div class="sec-hdr"><h2>Courses &amp; Departments</h2><p>View department and course info — managed by Admin / Super Admin</p></div>
-      <div id="coursesContent"></div>
-    </div>
+      <!-- COURSES & DEPARTMENTS -->
+      <div id="courses" class="section">
+        <div class="sec-hdr">
+          <h2>Courses &amp; Departments</h2>
+          <p>View department and course info — managed by Admin / Super Admin</p>
+        </div>
+        <div id="coursesContent"></div>
+      </div>
 
-    <!-- SUBJECTS (HOD/Co-HOD manage their own dept's subjects now) -->
-    <div id="subjects" class="section">
-      <div class="sec-hdr"><h2>Subjects</h2><p>Add and manage subjects for your department's courses &amp; semesters</p></div>
-      <div id="subjectsContent"></div>
-    </div>
+      <!-- SUBJECTS (HOD/Co-HOD manage their own dept's subjects now) -->
+      <div id="subjects" class="section">
+        <div class="sec-hdr">
+          <h2>Subjects</h2>
+          <p>Add and manage subjects for your department's courses &amp; semesters</p>
+        </div>
+        <div id="subjectsContent"></div>
+      </div>
 
-    <!-- CO-HOD HISTORY -->
-    <div id="cohodhistory" class="section">
-      <!-- <div class="sec-hdr"><h2>Co-HOD History</h2><p>Everything added, changed, or removed in your department, with who did it</p></div> -->
-      <div id="cohodHistoryContent"></div>
-    </div>
+      <!-- CO-HOD HISTORY -->
+      <div id="cohodhistory" class="section">
+        <!-- <div class="sec-hdr"><h2>Co-HOD History</h2><p>Everything added, changed, or removed in your department, with who did it</p></div> -->
+        <div id="cohodHistoryContent"></div>
+      </div>
 
-    <!-- PROFILE -->
-    <div id="profile" class="section">
-      <div class="sec-hdr"><h2>Profile</h2><p>Your account details and preferences</p></div>
-      <div class="profile-layout">
-        <div class="profile-card">
-          <div class="profile-card-header">
-            <div style="position:relative;display:inline-block">
-              <div class="pa" id="profileInitial">H</div>
-              <label for="hodPhotoInput" title="Change photo"
-                style="position:absolute;bottom:0;right:0;background:var(--accent,#3b82f6);color:#fff;border-radius:50%;
+      <!-- PROFILE -->
+      <div id="profile" class="section">
+        <div class="sec-hdr">
+          <h2>Profile</h2>
+          <p>Your account details and preferences</p>
+        </div>
+        <div class="profile-layout">
+          <div class="profile-card">
+            <div class="profile-card-header">
+              <div style="position:relative;display:inline-block">
+                <div class="pa" id="profileInitial">H</div>
+                <label for="hodPhotoInput" title="Change photo"
+                  style="position:absolute;bottom:0;right:0;background:var(--accent,#3b82f6);color:#fff;border-radius:50%;
                        width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px">✎</label>
-              <input type="file" id="hodPhotoInput" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadHodPhoto(event)">
+                <input type="file" id="hodPhotoInput" accept="image/jpeg,image/png,image/webp" style="display:none"
+                  onchange="uploadHodPhoto(event)">
+              </div>
+              <h2 id="profileName">-</h2>
+              <p id="profileDeptLabel">-</p>
+              <div id="hodPhotoStatus" style="font-size:12px;color:var(--muted,#888);margin-top:4px"></div>
             </div>
-            <h2 id="profileName">-</h2>
-            <p id="profileDeptLabel">-</p>
-            <div id="hodPhotoStatus" style="font-size:12px;color:var(--muted,#888);margin-top:4px"></div>
+            <div class="profile-body" id="profileInfo"></div>
+            <p style="font-size:12px;color:var(--muted,#888);padding:0 16px 12px">
+              Profile details are view-only here — only your photo can be updated. Contact Admin/Super Admin to change
+              any other detail.
+            </p>
           </div>
-          <div class="profile-body" id="profileInfo"></div>
-          <p style="font-size:12px;color:var(--muted,#888);padding:0 16px 12px">
-            Profile details are view-only here — only your photo can be updated. Contact Admin/Super Admin to change any other detail.
-          </p>
-        </div>
-        <div class="theme-card">
-          <h3>🎨 Appearance</h3>
-          <p style="font-size:13px;color:var(--text2);margin-bottom:18px;">Choose how EduDesk looks for you.</p>
-          <div class="theme-options">
-            <div class="theme-opt active" id="darkOpt" onclick="setTheme('dark')">
-              <div class="to-icon">🌙</div>
-              <div class="to-label">Dark Mode</div>
-              <div class="to-desc">Easy on the eyes</div>
-            </div>
-            <div class="theme-opt" id="lightOpt" onclick="setTheme('light')">
-              <div class="to-icon">☀️</div>
-              <div class="to-label">Light Mode</div>
-              <div class="to-desc">Clean & bright</div>
+          <div class="theme-card">
+            <h3>🎨 Appearance</h3>
+            <p style="font-size:13px;color:var(--text2);margin-bottom:18px;">Choose how EduDesk looks for you.</p>
+            <div class="theme-options">
+              <div class="theme-opt active" id="darkOpt" onclick="setTheme('dark')">
+                <div class="to-icon">🌙</div>
+                <div class="to-label">Dark Mode</div>
+                <div class="to-desc">Easy on the eyes</div>
+              </div>
+              <div class="theme-opt" id="lightOpt" onclick="setTheme('light')">
+                <div class="to-icon">☀️</div>
+                <div class="to-label">Light Mode</div>
+                <div class="to-desc">Clean & bright</div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-  </div><!-- /page-content -->
-</div><!-- /main -->
+    </div><!-- /page-content -->
+  </div><!-- /main -->
 
-<!-- DELETE STUDENT OVERLAY -->
-<div class="overlay" id="deleteOverlay"><div class="delete-panel" onclick="event.stopPropagation()"><h3>🗑 Delete Students</h3><p style="font-size:13px;color:var(--text2);">These students will be permanently removed:</p><div class="delete-list" id="deletePanelList"></div><div class="confirm-bar"><p>Total selected: <span class="confirm-count" id="deleteCount">0</span></p><button class="btn btn-danger" style="margin-right:8px;" onclick="confirmDelete()">Confirm Delete</button><button class="btn btn-ghost" onclick="closeDeletePanel()">Cancel</button></div></div></div>
-<div class="overlay" id="promoteOverlay"><div class="delete-panel" onclick="event.stopPropagation()"><h3>🎓 Promote Students</h3><p style="font-size:13px;color:var(--text2);" id="promoteDesc">These students will be advanced to the next semester:</p><div class="delete-list" id="promotePanelList"></div><div class="confirm-bar"><p>Total selected: <span class="confirm-count" id="promoteCount">0</span></p><button class="btn btn-success" style="margin-right:8px;" onclick="confirmPromote()">Confirm Promote</button><button class="btn btn-ghost" onclick="closePromotePanel()">Cancel</button></div></div></div>
-
-<!-- DELETE TEACHER OVERLAY -->
-<div class="overlay" id="deleteTchrOverlay"><div class="delete-panel" onclick="event.stopPropagation()"><h3>🗑 Delete Teachers</h3><p style="font-size:13px;color:var(--text2);">These teachers will be permanently removed:</p><div class="delete-list" id="deleteTchrPanelList"></div><div class="confirm-bar"><p>Total selected: <span class="confirm-count" id="deleteTchrCount">0</span></p><button class="btn btn-danger" style="margin-right:8px;" onclick="confirmDeleteTchr()">Confirm Delete</button><button class="btn btn-ghost" onclick="closeTchrDeletePanel()">Cancel</button></div></div></div>
-
-<!-- STUDENT DETAIL MODAL -->
-<div class="modal-overlay" id="studentModal" onclick="if(event.target===this)closeStudentModal()">
-  <div class="modal-box">
-    <div class="modal-header"><img id="modalAvatar" src="" alt=""><h2 id="modalName"></h2><p id="modalMeta"></p></div>
-    <div class="modal-body">
-      <div class="edit-success-msg" id="stuEditSuccess">✅ Student details updated successfully!</div>
-      <div class="modal-section"><h4>Personal Information</h4><div class="modal-grid" id="modalPersonal"></div></div>
-      <div class="modal-section"><h4>Parent / Guardian</h4><div class="modal-grid" id="modalParent"></div></div>
-      <div class="modal-section"><h4>Academic Details</h4><div class="modal-grid" id="modalAcademic"></div></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-primary" id="stuEditBtn" onclick="toggleStuEdit()">✏️ Edit Details</button>
-      <button class="btn btn-success" id="stuDoneBtn" onclick="saveStuEdit()" style="display:none;">✅ Done Editing</button>
-      <button class="btn modal-close" onclick="closeStudentModal()">✕ Close</button>
-    </div>
-  </div>
-</div>
-
-<!-- TEACHER DETAIL MODAL -->
-<div class="modal-overlay" id="teacherModal" onclick="if(event.target===this)closeTeacherModal()">
-  <div class="modal-box">
-    <div class="modal-header teacher"><img id="tModalAvatar" src="" alt=""><h2 id="tModalName"></h2><p id="tModalMeta"></p></div>
-    <div class="modal-body">
-      <div class="edit-success-msg" id="tchrEditSuccess">✅ Teacher details updated successfully!</div>
-      <div class="modal-section"><h4>Contact Details</h4><div class="modal-grid" id="tModalContact"></div></div>
-      <div class="modal-section"><h4>Professional Details</h4><div class="modal-grid" id="tModalProf"></div></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-primary" id="tchrEditBtn" onclick="toggleTchrEdit()">✏️ Edit Details</button>
-      <button class="btn btn-success" id="tchrDoneBtn" onclick="saveTchrEdit()" style="display:none;">✅ Done Editing</button>
-      <button class="btn modal-close" onclick="closeTeacherModal()">✕ Close</button>
-    </div>
-  </div>
-</div>
-
-<!-- EXCEL PREVIEW — STUDENTS -->
-<div class="excel-preview-overlay" id="stuExcelOverlay" onclick="if(event.target===this)closeStuExcel()">
-  <div class="excel-preview-box" onclick="event.stopPropagation()">
-    <div class="excel-preview-header"><div><h3>📚 Import Students from Excel</h3><span id="stuExcelFileName">No file selected</span></div><button class="btn btn-ghost btn-sm" onclick="closeStuExcel()">✕ Close</button></div>
-    <div class="excel-preview-body">
-      <p style="font-size:13px;color:var(--text2);margin-bottom:14px;">Map your Excel column headers to student fields. Unmapped columns will be skipped.</p>
-      <div id="stuColumnMapper"></div>
-      <div class="excel-data-preview"><h4>📋 Data Preview (all rows)</h4><div class="tbl-scroll" id="stuExcelPreview"></div></div>
-    </div>
-    <div class="excel-preview-footer">
-      <div class="import-success-bar" id="stuImportSuccess">✅ Students imported!</div>
-      <span id="stuExcelRowCount" style="font-size:13px;font-weight:700;color:var(--text2);margin-right:auto;"></span>
-      <button class="btn btn-ghost" onclick="closeStuExcel()">Cancel</button>
-      <button class="btn btn-primary" onclick="importStudentsFromExcel()">📄 Import All Students</button>
-    </div>
-  </div>
-</div>
-
-<!-- EXCEL PREVIEW — TEACHERS -->
-<div class="excel-preview-overlay" id="tchrExcelOverlay" onclick="if(event.target===this)closeTchrExcel()">
-  <div class="excel-preview-box" onclick="event.stopPropagation()">
-    <div class="excel-preview-header"><div><h3>📚 Import Teachers from Excel</h3><span id="tchrExcelFileName">No file selected</span></div><button class="btn btn-ghost btn-sm" onclick="closeTchrExcel()">✕ Close</button></div>
-    <div class="excel-preview-body">
-      <p style="font-size:13px;color:var(--text2);margin-bottom:14px;">Map your Excel column headers to teacher fields. Unmapped columns will be skipped.</p>
-      <div id="tchrColumnMapper"></div>
-      <div class="excel-data-preview"><h4>📋 Data Preview (all rows)</h4><div class="tbl-scroll" id="tchrExcelPreview"></div></div>
-    </div>
-    <div class="excel-preview-footer">
-      <div class="import-success-bar" id="tchrImportSuccess">✅ Teachers imported!</div>
-      <span id="tchrExcelRowCount" style="font-size:13px;font-weight:700;color:var(--text2);margin-right:auto;"></span>
-      <button class="btn btn-ghost" onclick="closeTchrExcel()">Cancel</button>
-      <button class="btn btn-primary" onclick="importTeachersFromExcel()">📄 Import All Teachers</button>
-    </div>
-  </div>
-</div>
-
-<!-- TOAST -->
-<div class="toast" id="toast"></div>
-
-<!-- LECTURE HISTORY MODAL -->
-<div class="lec-hist-overlay" id="lecHistModal" onclick="if(event.target===this)closeLecHist()">
-  <div class="lec-hist-box" onclick="event.stopPropagation()">
-    <div class="lec-hist-header">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <button class="btn btn-ghost btn-sm" onclick="closeLecHist()">← Back</button>
-        <h3 id="lecHistTitle">Subject — Lecture History</h3>
+  <!-- DELETE STUDENT OVERLAY -->
+  <div class="overlay" id="deleteOverlay">
+    <div class="delete-panel" onclick="event.stopPropagation()">
+      <h3>🗑 Delete Students</h3>
+      <p style="font-size:13px;color:var(--text2);">These students will be permanently removed:</p>
+      <div class="delete-list" id="deletePanelList"></div>
+      <div class="confirm-bar">
+        <p>Total selected: <span class="confirm-count" id="deleteCount">0</span></p><button class="btn btn-danger"
+          style="margin-right:8px;" onclick="confirmDelete()">Confirm Delete</button><button class="btn btn-ghost"
+          onclick="closeDeletePanel()">Cancel</button>
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="closeLecHist()">✕</button>
     </div>
-    <div class="lec-hist-body" id="lecHistBody"></div>
   </div>
-</div>
-
-<!-- ALL STUDENTS OVERLAY (from dashboard click) -->
-<div class="all-stu-overlay" id="allStuOverlay" onclick="if(event.target===this)closeAllStu()">
-  <div class="all-stu-box" onclick="event.stopPropagation()">
-    <div class="all-stu-header">
-      <h3 id="allStuTitle">All Students</h3>
-      <button class="btn btn-ghost btn-sm" onclick="closeAllStu()">✕ Close</button>
-    </div>
-    <div class="all-stu-body" id="allStuBody"></div>
-  </div>
-</div>
-
-<!-- ALL TEACHERS OVERLAY (from dashboard click) -->
-<div class="all-stu-overlay" id="allTchrOverlay" onclick="if(event.target===this)closeAllTchr()">
-  <div class="all-stu-box" onclick="event.stopPropagation()">
-    <div class="all-stu-header">
-      <h3 id="allTchrTitle">All Teachers</h3>
-      <button class="btn btn-ghost btn-sm" onclick="closeAllTchr()">✕ Close</button>
-    </div>
-    <div class="all-stu-body" id="allTchrBody"></div>
-  </div>
-</div>
-
-
-<!-- STUDENT MARKS MODAL -->
-<div class="marks-modal-overlay" id="stuMarksModal" onclick="if(event.target===this)closeStuMarksModal()">
-  <div class="marks-modal-box" onclick="event.stopPropagation()">
-    <div class="marks-modal-header">
-      <div>
-        <h3 id="marksModalStudentName">Student Marks</h3>
-        <p id="marksModalStudentMeta">Roll · Course · Semester</p>
+  <div class="overlay" id="promoteOverlay">
+    <div class="delete-panel" onclick="event.stopPropagation()">
+      <h3>🎓 Promote Students</h3>
+      <p style="font-size:13px;color:var(--text2);" id="promoteDesc">These students will be advanced to the next
+        semester:</p>
+      <div class="delete-list" id="promotePanelList"></div>
+      <div class="confirm-bar">
+        <p>Total selected: <span class="confirm-count" id="promoteCount">0</span></p><button class="btn btn-success"
+          style="margin-right:8px;" onclick="confirmPromote()">Confirm Promote</button><button class="btn btn-ghost"
+          onclick="closePromotePanel()">Cancel</button>
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="closeStuMarksModal()" style="background:rgba(255,255,255,.2);color:#fff;border-color:rgba(255,255,255,.3);">✕ Close</button>
     </div>
-    <div class="marks-modal-body">
-      <!-- Filter row -->
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
-        <div class="search-bar" style="flex:1;min-width:200px;margin-bottom:0;">
-          <span>🔍</span>
-          <input id="marksSubjectSearch" type="text" placeholder="Search subject..." oninput="filterMarksSubjects()">
+  </div>
+
+  <!-- DELETE TEACHER OVERLAY -->
+  <div class="overlay" id="deleteTchrOverlay">
+    <div class="delete-panel" onclick="event.stopPropagation()">
+      <h3>🗑 Delete Teachers</h3>
+      <p style="font-size:13px;color:var(--text2);">These teachers will be permanently removed:</p>
+      <div class="delete-list" id="deleteTchrPanelList"></div>
+      <div class="confirm-bar">
+        <p>Total selected: <span class="confirm-count" id="deleteTchrCount">0</span></p><button class="btn btn-danger"
+          style="margin-right:8px;" onclick="confirmDeleteTchr()">Confirm Delete</button><button class="btn btn-ghost"
+          onclick="closeTchrDeletePanel()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STUDENT DETAIL MODAL -->
+  <div class="modal-overlay" id="studentModal" onclick="if(event.target===this)closeStudentModal()">
+    <div class="modal-box">
+      <div class="modal-header"><img id="modalAvatar" src="" alt="">
+        <h2 id="modalName"></h2>
+        <p id="modalMeta"></p>
+      </div>
+      <div class="modal-body">
+        <div class="edit-success-msg" id="stuEditSuccess">✅ Student details updated successfully!</div>
+        <div class="modal-section">
+          <h4>Personal Information</h4>
+          <div class="modal-grid" id="modalPersonal"></div>
+        </div>
+        <div class="modal-section">
+          <h4>Parent / Guardian</h4>
+          <div class="modal-grid" id="modalParent"></div>
+        </div>
+        <div class="modal-section">
+          <h4>Academic Details</h4>
+          <div class="modal-grid" id="modalAcademic"></div>
         </div>
       </div>
-      <!-- Type selector -->
-      <div class="marks-type-selector">
-        <div class="mts-btn active-mid" id="mtsBtn_mid" onclick="setMarksModalType('mid')">📄 Mid-Semester</div>
-        <div class="mts-btn" id="mtsBtn_gut" onclick="setMarksModalType('gut')">📋 GTU / Internal</div>
-        <div class="mts-btn" id="mtsBtn_remedial" onclick="setMarksModalType('remedial')">🔄 Remedial</div>
-        <div class="mts-btn" id="mtsBtn_practical" onclick="setMarksModalType('practical')">🔬 Practical</div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="stuEditBtn" onclick="toggleStuEdit()">✏️ Edit Details</button>
+        <button class="btn btn-success" id="stuDoneBtn" onclick="saveStuEdit()" style="display:none;">✅ Done
+          Editing</button>
+        <button class="btn modal-close" onclick="closeStudentModal()">✕ Close</button>
       </div>
-      <!-- Marks content -->
-      <div id="marksModalContent"></div>
     </div>
   </div>
-</div>
+
+  <!-- TEACHER DETAIL MODAL -->
+  <div class="modal-overlay" id="teacherModal" onclick="if(event.target===this)closeTeacherModal()">
+    <div class="modal-box">
+      <div class="modal-header teacher"><img id="tModalAvatar" src="" alt="">
+        <h2 id="tModalName"></h2>
+        <p id="tModalMeta"></p>
+      </div>
+      <div class="modal-body">
+        <div class="edit-success-msg" id="tchrEditSuccess">✅ Teacher details updated successfully!</div>
+        <div class="modal-section">
+          <h4>Contact Details</h4>
+          <div class="modal-grid" id="tModalContact"></div>
+        </div>
+        <div class="modal-section">
+          <h4>Professional Details</h4>
+          <div class="modal-grid" id="tModalProf"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="tchrEditBtn" onclick="toggleTchrEdit()">✏️ Edit Details</button>
+        <button class="btn btn-success" id="tchrDoneBtn" onclick="saveTchrEdit()" style="display:none;">✅ Done
+          Editing</button>
+        <button class="btn modal-close" onclick="closeTeacherModal()">✕ Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXCEL PREVIEW — STUDENTS -->
+  <div class="excel-preview-overlay" id="stuExcelOverlay" onclick="if(event.target===this)closeStuExcel()">
+    <div class="excel-preview-box" onclick="event.stopPropagation()">
+      <div class="excel-preview-header">
+        <div>
+          <h3>📚 Import Students from Excel</h3><span id="stuExcelFileName">No file selected</span>
+        </div><button class="btn btn-ghost btn-sm" onclick="closeStuExcel()">✕ Close</button>
+      </div>
+      <div class="excel-preview-body">
+        <p style="font-size:13px;color:var(--text2);margin-bottom:14px;">Map your Excel column headers to student
+          fields. Unmapped columns will be skipped.</p>
+        <div id="stuColumnMapper"></div>
+        <div class="excel-data-preview">
+          <h4>📋 Data Preview (all rows)</h4>
+          <div class="tbl-scroll" id="stuExcelPreview"></div>
+        </div>
+      </div>
+      <div class="excel-preview-footer">
+        <div class="import-success-bar" id="stuImportSuccess">✅ Students imported!</div>
+        <span id="stuExcelRowCount" style="font-size:13px;font-weight:700;color:var(--text2);margin-right:auto;"></span>
+        <button class="btn btn-ghost" onclick="closeStuExcel()">Cancel</button>
+        <button class="btn btn-primary" onclick="importStudentsFromExcel()">📄 Import All Students</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXCEL PREVIEW — TEACHERS -->
+  <div class="excel-preview-overlay" id="tchrExcelOverlay" onclick="if(event.target===this)closeTchrExcel()">
+    <div class="excel-preview-box" onclick="event.stopPropagation()">
+      <div class="excel-preview-header">
+        <div>
+          <h3>📚 Import Teachers from Excel</h3><span id="tchrExcelFileName">No file selected</span>
+        </div><button class="btn btn-ghost btn-sm" onclick="closeTchrExcel()">✕ Close</button>
+      </div>
+      <div class="excel-preview-body">
+        <p style="font-size:13px;color:var(--text2);margin-bottom:14px;">Map your Excel column headers to teacher
+          fields. Unmapped columns will be skipped.</p>
+        <div id="tchrColumnMapper"></div>
+        <div class="excel-data-preview">
+          <h4>📋 Data Preview (all rows)</h4>
+          <div class="tbl-scroll" id="tchrExcelPreview"></div>
+        </div>
+      </div>
+      <div class="excel-preview-footer">
+        <div class="import-success-bar" id="tchrImportSuccess">✅ Teachers imported!</div>
+        <span id="tchrExcelRowCount"
+          style="font-size:13px;font-weight:700;color:var(--text2);margin-right:auto;"></span>
+        <button class="btn btn-ghost" onclick="closeTchrExcel()">Cancel</button>
+        <button class="btn btn-primary" onclick="importTeachersFromExcel()">📄 Import All Teachers</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <!-- LECTURE HISTORY MODAL -->
+  <div class="lec-hist-overlay" id="lecHistModal" onclick="if(event.target===this)closeLecHist()">
+    <div class="lec-hist-box" onclick="event.stopPropagation()">
+      <div class="lec-hist-header">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button class="btn btn-ghost btn-sm" onclick="closeLecHist()">← Back</button>
+          <h3 id="lecHistTitle">Subject — Lecture History</h3>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="closeLecHist()">✕</button>
+      </div>
+      <div class="lec-hist-body" id="lecHistBody"></div>
+    </div>
+  </div>
+
+  <!-- ALL STUDENTS OVERLAY (from dashboard click) -->
+  <div class="all-stu-overlay" id="allStuOverlay" onclick="if(event.target===this)closeAllStu()">
+    <div class="all-stu-box" onclick="event.stopPropagation()">
+      <div class="all-stu-header">
+        <h3 id="allStuTitle">All Students</h3>
+        <button class="btn btn-ghost btn-sm" onclick="closeAllStu()">✕ Close</button>
+      </div>
+      <div class="all-stu-body" id="allStuBody"></div>
+    </div>
+  </div>
+
+  <!-- ALL TEACHERS OVERLAY (from dashboard click) -->
+  <div class="all-stu-overlay" id="allTchrOverlay" onclick="if(event.target===this)closeAllTchr()">
+    <div class="all-stu-box" onclick="event.stopPropagation()">
+      <div class="all-stu-header">
+        <h3 id="allTchrTitle">All Teachers</h3>
+        <button class="btn btn-ghost btn-sm" onclick="closeAllTchr()">✕ Close</button>
+      </div>
+      <div class="all-stu-body" id="allTchrBody"></div>
+    </div>
+  </div>
 
 
-<!-- ═══ JavaScript — load order matters ═══ -->
-<!-- 1. UI utilities (theme, toast, modals) -->
-<script src="js/ui.js"></script>
-<!-- 2. Global state & mock data -->
-<script src="js/data.js"></script>
-<!-- 3. API client -->
-<script src="js/api.js"></script>
-<!-- 4. App bootstrap & navigation -->
-<script src="js/app.js"></script>
-<!-- 5. Feature modules -->
-<script src="js/dashboard.js"></script>
-<script src="js/students.js"></script>
-<script src="js/subjects.js"></script>
-<script src="js/cohodHistory.js"></script>
-<script src="js/teachers.js"></script>
-<script src="js/notices.js"></script>
-<script src="js/schedule.js"></script>
-<script src="js/attendance.js"></script>
-<script src="js/marks.js"></script>
-<script src="js/reports.js"></script>
-<script src="js/excel.js"></script>
-<script src="js/cc.js"></script>
-<!-- 6. Modals (depend on all modules above) -->
-<script src="js/modals.js"></script>
+  <!-- STUDENT MARKS MODAL -->
+  <div class="marks-modal-overlay" id="stuMarksModal" onclick="if(event.target===this)closeStuMarksModal()">
+    <div class="marks-modal-box" onclick="event.stopPropagation()">
+      <div class="marks-modal-header">
+        <div>
+          <h3 id="marksModalStudentName">Student Marks</h3>
+          <p id="marksModalStudentMeta">Roll · Course · Semester</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="closeStuMarksModal()"
+          style="background:rgba(255,255,255,.2);color:#fff;border-color:rgba(255,255,255,.3);">✕ Close</button>
+      </div>
+      <div class="marks-modal-body">
+        <!-- Filter row -->
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
+          <div class="search-bar" style="flex:1;min-width:200px;margin-bottom:0;">
+            <span>🔍</span>
+            <input id="marksSubjectSearch" type="text" placeholder="Search subject..." oninput="filterMarksSubjects()">
+          </div>
+        </div>
+        <!-- Type selector -->
+        <div class="marks-type-selector">
+          <div class="mts-btn active-mid" id="mtsBtn_mid" onclick="setMarksModalType('mid')">📄 Mid-Semester</div>
+          <div class="mts-btn" id="mtsBtn_gut" onclick="setMarksModalType('gut')">📋 GTU / Internal</div>
+          <div class="mts-btn" id="mtsBtn_remedial" onclick="setMarksModalType('remedial')">🔄 Remedial</div>
+          <div class="mts-btn" id="mtsBtn_practical" onclick="setMarksModalType('practical')">🔬 Practical</div>
+        </div>
+        <!-- Marks content -->
+        <div id="marksModalContent"></div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══ JavaScript — load order matters ═══ -->
+  <!-- 1. UI utilities (theme, toast, modals) -->
+  <script src="js/ui.js"></script>
+  <!-- 2. Global state & mock data -->
+  <script src="js/data.js"></script>
+  <!-- 3. API client -->
+  <script src="js/api.js"></script>
+  <!-- 4. App bootstrap & navigation -->
+  <script src="js/app.js"></script>
+  <!-- 5. Feature modules -->
+  <script src="js/dashboard.js"></script>
+  <script src="js/students.js"></script>
+  <script src="js/subjects.js"></script>
+  <script src="js/cohodHistory.js"></script>
+  <script src="js/teachers.js"></script>
+  <script src="js/notices.js"></script>
+  <script src="js/schedule.js"></script>
+  <script src="js/attendance.js"></script>
+  <script src="js/marks.js"></script>
+  <script src="js/reports.js"></script>
+  <script src="js/excel.js"></script>
+  <script src="js/cc.js"></script>
+  <!-- 6. Modals (depend on all modules above) -->
+  <script src="js/modals.js"></script>
 
 </body>
+
 </html>
