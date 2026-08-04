@@ -358,10 +358,17 @@ router.put(
       }
     }
     if ("emergencyContact" in body) {
-      try {
-        body.emergencyContact = validateMobileNumber(body.emergencyContact);
-      } catch (e) {
-        return fail(res, e.status || 400, e.message);
+      const trimmedEmergencyContact = String(
+        body.emergencyContact || "",
+      ).trim();
+      if (trimmedEmergencyContact) {
+        try {
+          body.emergencyContact = validateMobileNumber(body.emergencyContact);
+        } catch (e) {
+          return fail(res, e.status || 400, e.message);
+        }
+      } else {
+        delete body.emergencyContact;
       }
     }
     const user = await User.findOneAndUpdate(

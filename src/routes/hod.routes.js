@@ -716,10 +716,17 @@ router.put(
   asyncHandler(async (req, res) => {
     const body = { ...req.body };
     if ("emergencyContact" in body) {
-      try {
-        body.emergencyContact = validateMobileNumber(body.emergencyContact);
-      } catch (e) {
-        return fail(res, e.status || 400, e.message);
+      const trimmedEmergencyContact = String(
+        body.emergencyContact || "",
+      ).trim();
+      if (trimmedEmergencyContact) {
+        try {
+          body.emergencyContact = validateMobileNumber(body.emergencyContact);
+        } catch (e) {
+          return fail(res, e.status || 400, e.message);
+        }
+      } else {
+        delete body.emergencyContact;
       }
     }
     if (body.email) {
@@ -1562,13 +1569,21 @@ router.patch(
       { ...scope(req), subject: { $in: subjectIdList }, examType },
       {
         $set: publish
-          ? { published: true, publishedAt: new Date(), publishedBy: req.user.id }
+          ? {
+              published: true,
+              publishedAt: new Date(),
+              publishedBy: req.user.id,
+            }
           : { published: false },
       },
     );
     ok(
       res,
-      { matched: result.matchedCount, modified: result.modifiedCount, published: publish },
+      {
+        matched: result.matchedCount,
+        modified: result.modifiedCount,
+        published: publish,
+      },
       publish
         ? `Marks sent to ${result.modifiedCount} student record(s).`
         : `Marks withdrawn from ${result.modifiedCount} student record(s).`,

@@ -1,17 +1,17 @@
-import bcrypt from 'bcryptjs';
-import mongoose from 'mongoose';
-import College from '../models/College.js';
-import Department from '../models/Department.js';
-import User from '../models/User.js';
-import Student from '../models/Student.js';
-import Subject from '../models/Subject.js';
-import Course from '../models/Course.js';
-import Notice from '../models/Notice.js';
-import Attendance from '../models/Attendance.js';
-import Mark from '../models/Mark.js';
-import Schedule from '../models/Schedule.js';
-import Syllabus from '../models/Syllabus.js';
-import CoHodActivity from '../models/CoHodActivity.js';
+import bcrypt from "bcryptjs";
+import mongoose from "mongoose";
+import College from "../models/College.js";
+import Department from "../models/Department.js";
+import User from "../models/User.js";
+import Student from "../models/Student.js";
+import Subject from "../models/Subject.js";
+import Course from "../models/Course.js";
+import Notice from "../models/Notice.js";
+import Attendance from "../models/Attendance.js";
+import Mark from "../models/Mark.js";
+import Schedule from "../models/Schedule.js";
+import Syllabus from "../models/Syllabus.js";
+import CoHodActivity from "../models/CoHodActivity.js";
 
 export const live = { isDeleted: false };
 
@@ -21,20 +21,40 @@ export const live = { isDeleted: false };
 // so the Dept Admin's history page shows the complete picture, including how the
 // Co-Dept Admin came to be there in the first place. Never throws — a logging
 // failure should never block the action itself.
-export async function logDeptActivity({ college, department, actor, actorName, actorRole, message }) {
+export async function logDeptActivity({
+  college,
+  department,
+  actor,
+  actorName,
+  actorRole,
+  message,
+}) {
   try {
     if (!department) return;
-    await CoHodActivity.create({ college, department, actor, actorName, actorRole: actorRole || 'hod', message });
-  } catch (_) { /* best-effort logging only */ }
+    await CoHodActivity.create({
+      college,
+      department,
+      actor,
+      actorName,
+      actorRole: actorRole || "hod",
+      message,
+    });
+  } catch (_) {
+    /* best-effort logging only */
+  }
 }
 
 export async function logCoHodActivity(user, message) {
   return logDeptActivity({
-    college: user.college, department: user.department,
-    actor: user.id || user._id, actorName: user.name, actorRole: user.role, message,
+    college: user.college,
+    department: user.department,
+    actor: user.id || user._id,
+    actorName: user.name,
+    actorRole: user.role,
+    message,
   });
 }
-export const idOf = value => value?._id || value;
+export const idOf = (value) => value?._id || value;
 
 export function roleIs(user, ...roles) {
   return roles.includes(user.role);
@@ -53,28 +73,41 @@ export function roleIs(user, ...roles) {
 // within MongoDB's 16MB document limit even after base64 overhead.
 const MAX_PDF_BYTES = 5 * 1024 * 1024;
 export function validatePdfDataUri(dataUri) {
-  if (!dataUri || typeof dataUri !== 'string') throw badRequest('No PDF file was provided.');
-  const match = /^data:application\/pdf;base64,([A-Za-z0-9+/=]+)$/.exec(dataUri.trim());
-  if (!match) throw badRequest('Attachment must be a PDF file.');
+  if (!dataUri || typeof dataUri !== "string")
+    throw badRequest("No PDF file was provided.");
+  const match = /^data:application\/pdf;base64,([A-Za-z0-9+/=]+)$/.exec(
+    dataUri.trim(),
+  );
+  if (!match) throw badRequest("Attachment must be a PDF file.");
   const approxBytes = Math.floor(match[1].length * 0.75);
   if (approxBytes > MAX_PDF_BYTES) {
-    throw badRequest(`PDF is too large (max ${Math.floor(MAX_PDF_BYTES / 1024 / 1024)}MB). Please choose a smaller file.`);
+    throw badRequest(
+      `PDF is too large (max ${Math.floor(MAX_PDF_BYTES / 1024 / 1024)}MB). Please choose a smaller file.`,
+    );
   }
-  if (approxBytes < 50) throw badRequest('PDF file appears to be empty or corrupted.');
+  if (approxBytes < 50)
+    throw badRequest("PDF file appears to be empty or corrupted.");
   return dataUri.trim();
 }
 
 const MAX_AVATAR_BYTES = 100 * 1024; // 100KB raw image, per product requirement
 export function validateImageDataUri(dataUri) {
-  if (!dataUri || typeof dataUri !== 'string') throw badRequest('No image was provided.');
-  const match = /^data:image\/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=]+)$/.exec(dataUri.trim());
-  if (!match) throw badRequest('Image must be a JPEG, PNG, or WEBP file.');
+  if (!dataUri || typeof dataUri !== "string")
+    throw badRequest("No image was provided.");
+  const match =
+    /^data:image\/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=]+)$/.exec(
+      dataUri.trim(),
+    );
+  if (!match) throw badRequest("Image must be a JPEG, PNG, or WEBP file.");
   const base64 = match[2];
   const approxBytes = Math.floor(base64.length * 0.75);
   if (approxBytes > MAX_AVATAR_BYTES) {
-    throw badRequest(`Image is too large (max ${Math.floor(MAX_AVATAR_BYTES / 1024)}KB). Please choose a smaller photo.`);
+    throw badRequest(
+      `Image is too large (max ${Math.floor(MAX_AVATAR_BYTES / 1024)}KB). Please choose a smaller photo.`,
+    );
   }
-  if (approxBytes < 100) throw badRequest('Image file appears to be empty or corrupted.');
+  if (approxBytes < 100)
+    throw badRequest("Image file appears to be empty or corrupted.");
   return dataUri.trim();
 }
 
@@ -82,12 +115,17 @@ export function validateImageDataUri(dataUri) {
 // update), must be a plausible mobile number. Kept intentionally permissive
 // on formatting (spaces/dashes/+country code) since this is a real-world
 // contact number field, not a strict E.164 validator.
-export function validateMobileNumber(value, fieldLabel = 'Emergency contact number') {
-  const raw = String(value || '').trim();
+export function validateMobileNumber(
+  value,
+  fieldLabel = "Emergency contact number",
+) {
+  const raw = String(value || "").trim();
   if (!raw) throw badRequest(`${fieldLabel} is required.`);
-  const digits = raw.replace(/[\s\-()]/g, '');
+  const digits = raw.replace(/[\s\-()]/g, "");
   if (!/^\+?\d{10,15}$/.test(digits)) {
-    throw badRequest(`${fieldLabel} must be a valid mobile number (10-15 digits).`);
+    throw badRequest(
+      `${fieldLabel} must be a valid mobile number (10-15 digits).`,
+    );
   }
   return raw;
 }
@@ -99,13 +137,18 @@ export function validateMobileNumber(value, fieldLabel = 'Emergency contact numb
 // (touching those would ripple through auth/permissions); only the
 // display label changed.
 export async function appointHod({ dept, role, user }) {
-  if (!['hod', 'co_hod'].includes(role)) throw badRequest('Role must be either Dept Admin or Co-Dept Admin.');
-  const slotField = role === 'hod' ? 'hod' : 'coHod';
+  if (!["hod", "co_hod"].includes(role))
+    throw badRequest("Role must be either Dept Admin or Co-Dept Admin.");
+  const slotField = role === "hod" ? "hod" : "coHod";
   const existingId = dept[slotField];
   if (existingId && String(existingId) !== String(user._id || user.id)) {
-    const existing = await User.findOne({ _id: existingId, isDeleted: false }).select('name').lean();
+    const existing = await User.findOne({ _id: existingId, isDeleted: false })
+      .select("name")
+      .lean();
     if (existing) {
-      throw badRequest(`This department already has a ${role === 'hod' ? 'Dept Admin' : 'Co-Dept Admin'} (${existing.name}). Remove them first before appointing someone new.`);
+      throw badRequest(
+        `This department already has a ${role === "hod" ? "Dept Admin" : "Co-Dept Admin"} (${existing.name}). Remove them first before appointing someone new.`,
+      );
     }
   }
   dept[slotField] = user._id || user.id;
@@ -117,22 +160,48 @@ export async function appointHod({ dept, role, user }) {
 // when that HOD/Co-HOD account is deleted, so the department doesn't keep
 // pointing at a soft-deleted user.
 export async function detachHodFromDepartment(userId, by) {
-  await Department.updateMany({ hod: userId }, { $set: { hod: null, updatedBy: by } });
-  await Department.updateMany({ coHod: userId }, { $set: { coHod: null, updatedBy: by } });
+  await Department.updateMany(
+    { hod: userId },
+    { $set: { hod: null, updatedBy: by } },
+  );
+  await Department.updateMany(
+    { coHod: userId },
+    { $set: { coHod: null, updatedBy: by } },
+  );
 }
 
-export async function ensureUser({ name, email, role, college, department, phone, subject, course, designation, qualification, experience, emergencyContact }, by, options = {}) {
-  const normalized = String(email || '').toLowerCase().trim();
-  if (!normalized) throw Object.assign(new Error('Email is required.'), { status: 400 });
-  let user = await User.findOne({ email: normalized }).select('+passwordHash');
+export async function ensureUser(
+  {
+    name,
+    email,
+    role,
+    college,
+    department,
+    phone,
+    subject,
+    course,
+    designation,
+    qualification,
+    experience,
+    emergencyContact,
+  },
+  by,
+  options = {},
+) {
+  const normalized = String(email || "")
+    .toLowerCase()
+    .trim();
+  if (!normalized)
+    throw Object.assign(new Error("Email is required."), { status: 400 });
+  let user = await User.findOne({ email: normalized }).select("+passwordHash");
   if (!user) {
     await ensureEmailAvailable(normalized, {
       excludeStudentId: options.excludeStudentId,
-      allowParentReuse: role === 'parent',
+      allowParentReuse: role === "parent",
     });
     user = new User({ email: normalized, firstLogin: true, createdBy: by });
-  } else if (!(role === 'parent' && user.role === 'parent')) {
-    throw badRequest('This email is already registered.');
+  } else if (!(role === "parent" && user.role === "parent")) {
+    throw badRequest("This email is already registered.");
   }
   // Only update these fields if provided
   if (name) user.name = name;
@@ -156,73 +225,98 @@ export async function ensureUser({ name, email, role, college, department, phone
 export function mapStudent(s) {
   if (!s) return null;
   const o = s.toJSON ? s.toJSON() : { ...s };
-  o.roll = o.roll || o.rollNo || o.rollNumber || '';
-  o.rollNo = o.rollNo || o.roll || '';
-  o.rollNumber = o.rollNumber || o.roll || o.rollNo || '';
+  o.roll = o.roll || o.rollNo || o.rollNumber || "";
+  o.rollNo = o.rollNo || o.roll || "";
+  o.rollNumber = o.rollNumber || o.roll || o.rollNo || "";
   o.sem = o.sem || o.semester || 1;
   o.semester = o.semester || o.sem || 1;
-  o.course = o.course || o.courseName || '';
+  o.course = o.course || o.courseName || "";
   o.courseName = o.courseName || o.course;
-  o.phone = o.phone || o.mobile || '';
-  o.mobile = o.mobile || o.phone || '';
+  o.phone = o.phone || o.mobile || "";
+  o.mobile = o.mobile || o.phone || "";
   o.active = o.active !== false && o.isActive !== false;
   o.isActive = o.active;
-  if (typeof o.address === 'object' && o.address) {
-    o.street = o.street || o.address.street || '';
-    o.city = o.city || o.address.city || '';
-    o.state = o.state || o.address.state || '';
-    o.pincode = o.pincode || o.address.pincode || '';
+  if (typeof o.address === "object" && o.address) {
+    o.street = o.street || o.address.street || "";
+    o.city = o.city || o.address.city || "";
+    o.state = o.state || o.address.state || "";
+    o.pincode = o.pincode || o.address.pincode || "";
   }
-  o.status = o.isDeleted ? 'Deleted' : (o.status || (o.active !== false ? 'Active' : 'Inactive'));
+  o.status = o.isDeleted
+    ? "Deleted"
+    : o.status || (o.active !== false ? "Active" : "Inactive");
   return o;
 }
 
 export function mapTeacher(t) {
   if (!t) return null;
   const o = t.toJSON ? t.toJSON() : { ...t };
-  o.status = o.isDeleted ? 'Deleted' : (o.active !== false ? 'Active' : 'Inactive');
+  o.status = o.isDeleted
+    ? "Deleted"
+    : o.active !== false
+      ? "Active"
+      : "Inactive";
   // Always derive from role rather than trusting a possibly-stale stored
   // `designation` string — accounts appointed before the HOD→Dept Admin
   // rename still have "HOD"/"Co-HOD" saved in the DB.
-  o.designation = ['hod', 'co_hod'].includes(o.role)
-    ? (o.role === 'co_hod' ? 'Co-Dept Admin' : 'Dept Admin')
-    : o.role === 'admin' ? 'Principal' : (o.designation || 'Teacher');
+  o.designation = ["hod", "co_hod"].includes(o.role)
+    ? o.role === "co_hod"
+      ? "Co-Dept Admin"
+      : "Dept Admin"
+    : o.role === "admin"
+      ? "Principal"
+      : o.designation || "Teacher";
   return o;
 }
 
 export async function collegeScope(user) {
-  if (roleIs(user, 'super_admin', 'superadmin')) return {};
+  if (roleIs(user, "super_admin", "superadmin")) return {};
   return { college: user.college };
 }
 
 export async function departmentScope(user) {
-  if (roleIs(user, 'hod', 'co_hod', 'teacher')) return { college: user.college, department: user.department };
+  if (roleIs(user, "hod", "co_hod", "teacher"))
+    return { college: user.college, department: user.department };
   return collegeScope(user);
 }
 
 export async function softDeleteMany(Model, filter, userId) {
-  return Model.updateMany(filter, { $set: { isDeleted: true, active: false, deletedAt: new Date(), deletedBy: userId } });
+  return Model.updateMany(filter, {
+    $set: {
+      isDeleted: true,
+      active: false,
+      deletedAt: new Date(),
+      deletedBy: userId,
+    },
+  });
 }
 
 function badRequest(message) {
   return Object.assign(new Error(message), { status: 400 });
 }
 
-export async function ensureEmailAvailable(email, { excludeUserId, excludeStudentId, allowParentReuse = false } = {}) {
-  const normalized = String(email || '').toLowerCase().trim();
+export async function ensureEmailAvailable(
+  email,
+  { excludeUserId, excludeStudentId, allowParentReuse = false } = {},
+) {
+  const normalized = String(email || "")
+    .toLowerCase()
+    .trim();
   if (!normalized) return normalized;
 
   const userFilter = { email: normalized, isDeleted: false };
   if (excludeUserId) userFilter._id = { $ne: excludeUserId };
-  const existingUser = await User.findOne(userFilter).select('role').lean();
-  if (existingUser && !(allowParentReuse && existingUser.role === 'parent')) {
-    throw badRequest('This email is already registered.');
+  const existingUser = await User.findOne(userFilter).select("role").lean();
+  if (existingUser && !(allowParentReuse && existingUser.role === "parent")) {
+    throw badRequest("This email is already registered.");
   }
 
   const studentFilter = { email: normalized, isDeleted: false };
   if (excludeStudentId) studentFilter._id = { $ne: excludeStudentId };
-  const existingStudent = await Student.findOne(studentFilter).select('_id').lean();
-  if (existingStudent) throw badRequest('This email is already registered.');
+  const existingStudent = await Student.findOne(studentFilter)
+    .select("_id")
+    .lean();
+  if (existingStudent) throw badRequest("This email is already registered.");
 
   return normalized;
 }
@@ -231,12 +325,19 @@ export async function ensureEmailAvailable(email, { excludeUserId, excludeStuden
 // must differ from the student's own email. Enforced at the app layer (not a
 // DB unique index) because this schema soft-deletes rather than removes rows —
 // see the note on the Student model's parentEmail index.
-export async function validateParentEmail({ parentEmail, studentEmail, excludeStudentId }) {
-  const email = String(parentEmail || '').toLowerCase().trim();
-  if (!email) throw badRequest('Parent email is required.');
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw badRequest('Parent email is not a valid email address.');
+export async function validateParentEmail({
+  parentEmail,
+  studentEmail,
+  excludeStudentId,
+}) {
+  const email = String(parentEmail || "")
+    .toLowerCase()
+    .trim();
+  if (!email) throw badRequest("Parent email is required.");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    throw badRequest("Parent email is not a valid email address.");
   if (studentEmail && email === String(studentEmail).toLowerCase().trim()) {
-    throw badRequest('Parent email cannot be the same as the student email.');
+    throw badRequest("Parent email cannot be the same as the student email.");
   }
   // Parent emails ARE allowed to repeat across multiple students — one parent
   // can have more than one child in the system, sharing a single parent
@@ -254,29 +355,34 @@ export async function validateParentEmail({ parentEmail, studentEmail, excludeSt
 // if any, are untouched) rather than deleted — nothing is destroyed, it just
 // stops granting access to this particular student's data.
 export async function syncParentAccount(student, by) {
-  const newEmail = String(student.parentEmail || '').toLowerCase().trim();
+  const newEmail = String(student.parentEmail || "")
+    .toLowerCase()
+    .trim();
   // Detach this student from any parent account that no longer matches
   // (but keep that parent account intact for their other children, if any).
   await User.updateMany(
-    { role: 'parent', students: student._id, email: { $ne: newEmail } },
-    { $pull: { students: student._id }, $set: { updatedBy: by } }
+    { role: "parent", students: student._id, email: { $ne: newEmail } },
+    { $pull: { students: student._id }, $set: { updatedBy: by } },
   );
   // Legacy single-student field — clear it too if it pointed here.
   await User.updateMany(
-    { role: 'parent', student: student._id, email: { $ne: newEmail } },
-    { $unset: { student: 1 }, $set: { updatedBy: by } }
+    { role: "parent", student: student._id, email: { $ne: newEmail } },
+    { $unset: { student: 1 }, $set: { updatedBy: by } },
   );
   if (!newEmail) return null;
-  const parent = await ensureUser({
-    name: `Parent of ${student.name}`,
-    email: newEmail,
-    role: 'parent',
-    college: student.college,
-    department: student.department,
-  }, by);
+  const parent = await ensureUser(
+    {
+      name: `Parent of ${student.name}`,
+      email: newEmail,
+      role: "parent",
+      college: student.college,
+      department: student.department,
+    },
+    by,
+  );
   // Add this student to the parent's children list if not already there —
   // this is what lets one parent email cover more than one child.
-  if (!parent.students?.some(s => String(s) === String(student._id))) {
+  if (!parent.students?.some((s) => String(s) === String(student._id))) {
     parent.students = [...(parent.students || []), student._id];
   }
   if (!parent.student) parent.student = student._id; // keep legacy field populated too
@@ -287,26 +393,48 @@ export async function syncParentAccount(student, by) {
 export async function createStudent(payload, user, options = {}) {
   const { requireParentEmail = true, requireStudentEmail = false } = options;
   const roll = payload.roll || payload.rollNo || payload.rollNumber;
-  if (!roll) throw badRequest('Roll number is required.');
-  if (requireStudentEmail && !String(payload.email || '').trim()) {
-    throw badRequest('Student email is required.');
+  if (!roll) throw badRequest("Roll number is required.");
+  if (requireStudentEmail && !String(payload.email || "").trim()) {
+    throw badRequest("Student email is required.");
   }
-  const isDepartmentRole = roleIs(user, 'hod', 'co_hod', 'teacher');
-  const dept = isDepartmentRole ? user.department : (payload.department || payload.departmentId || user.department);
-  const col = isDepartmentRole ? user.college : (payload.college || user.college);
-  if (!col || !dept) throw Object.assign(new Error('College and department are required.'), { status: 400 });
+  const isDepartmentRole = roleIs(user, "hod", "co_hod", "teacher");
+  const dept = isDepartmentRole
+    ? user.department
+    : payload.department || payload.departmentId || user.department;
+  const col = isDepartmentRole ? user.college : payload.college || user.college;
+  if (!col || !dept)
+    throw Object.assign(new Error("College and department are required."), {
+      status: 400,
+    });
 
   const course = payload.course || payload.courseName;
-  if (!course) throw badRequest('Course is required — a student must be assigned to a specific course.');
+  if (!course)
+    throw badRequest(
+      "Course is required — a student must be assigned to a specific course.",
+    );
   const semester = Number(payload.semester || payload.sem || 1);
 
   // Spec item 9: no duplicate student records — a roll number must be unique
   // within its own class (college + department + course + semester).
   const dupRoll = await Student.findOne({
-    college: col, department: dept, course, semester, ...live,
-    roll: new RegExp(`^${String(roll).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
-  }).select('_id').lean();
-  if (dupRoll) throw badRequest(`Roll number "${roll}" is already in use in ${course} Semester ${semester}.`);
+    college: col,
+    department: dept,
+    course,
+    semester,
+    ...live,
+    roll: new RegExp(
+      `^${String(roll)
+        .trim()
+        .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
+      "i",
+    ),
+  })
+    .select("_id")
+    .lean();
+  if (dupRoll)
+    throw badRequest(
+      `Roll number "${roll}" is already in use in ${course} Semester ${semester}.`,
+    );
 
   // Parent email is mandatory when a HOD/Admin adds one student by hand
   // (there's a form right there to fill it in). Bulk Excel import is more
@@ -319,22 +447,28 @@ export async function createStudent(payload, user, options = {}) {
   // per-row try/catch in the import route.
   let parentEmail;
   if (requireParentEmail || payload.parentEmail) {
-    parentEmail = await validateParentEmail({ parentEmail: payload.parentEmail, studentEmail: payload.email });
+    parentEmail = await validateParentEmail({
+      parentEmail: payload.parentEmail,
+      studentEmail: payload.email,
+    });
   } else {
     parentEmail = undefined;
   }
 
-  const studentEmail = payload.email ? await ensureEmailAvailable(payload.email) : '';
+  const studentEmail = payload.email
+    ? await ensureEmailAvailable(payload.email)
+    : "";
 
-  const address = typeof payload.address === 'object' && payload.address
-    ? payload.address
-    : {
-        street: payload.street || payload.address || '',
-        city: payload.city || '',
-        state: payload.state || '',
-        pincode: payload.pincode || ''
-      };
-  
+  const address =
+    typeof payload.address === "object" && payload.address
+      ? payload.address
+      : {
+          street: payload.street || payload.address || "",
+          city: payload.city || "",
+          state: payload.state || "",
+          pincode: payload.pincode || "",
+        };
+
   const student = await Student.create({
     ...payload,
     email: studentEmail || payload.email,
@@ -342,30 +476,34 @@ export async function createStudent(payload, user, options = {}) {
     rollNo: roll,
     rollNumber: roll,
     parentEmail,
-    phone: payload.phone || payload.mobile || '',
-    mobile: payload.mobile || payload.phone || '',
+    phone: payload.phone || payload.mobile || "",
+    mobile: payload.mobile || payload.phone || "",
     course,
     courseName: payload.courseName || course,
     semester,
     sem: semester,
     address,
-    city: payload.city || address.city || '',
+    city: payload.city || address.city || "",
     college: col,
     department: dept,
-    createdBy: user.id || user._id
+    createdBy: user.id || user._id,
   });
 
   await syncParentAccount(student, user.id || user._id);
 
   if (studentEmail) {
-    const account = await ensureUser({
-      name: payload.name,
-      email: studentEmail,
-      role: 'student',
-      college: student.college,
-      department: student.department,
-      phone: payload.phone
-    }, user.id || user._id, { excludeStudentId: student._id });
+    const account = await ensureUser(
+      {
+        name: payload.name,
+        email: studentEmail,
+        role: "student",
+        college: student.college,
+        department: student.department,
+        phone: payload.phone,
+      },
+      user.id || user._id,
+      { excludeStudentId: student._id },
+    );
     student.user = account.id;
     account.student = student.id;
     await Promise.all([account.save(), student.save()]);
@@ -380,44 +518,52 @@ export async function updateStudentAndSyncParent(filter, rawBody, by) {
   const existing = await Student.findOne(filter);
   if (!existing) return null;
   const body = { ...rawBody, updatedBy: by };
-  if ('email' in body) {
+  if ("email" in body) {
     body.email = await ensureEmailAvailable(body.email, {
       excludeStudentId: existing._id,
       excludeUserId: existing.user,
     });
   }
-  if ('parentEmail' in body) {
-    body.parentEmail = await validateParentEmail({
-      parentEmail: body.parentEmail,
-      studentEmail: body.email || existing.email,
-      excludeStudentId: existing._id,
-    });
+  if ("parentEmail" in body) {
+    const trimmedParentEmail = String(body.parentEmail || "").trim();
+    if (trimmedParentEmail) {
+      body.parentEmail = await validateParentEmail({
+        parentEmail: body.parentEmail,
+        studentEmail: body.email || existing.email,
+        excludeStudentId: existing._id,
+      });
+    } else {
+      // Edit forms resend every field's current value, including ones the
+      // user never touched. Don't force "required" on a field that simply
+      // wasn't filled in this edit, and don't blank out an existing value.
+      delete body.parentEmail;
+    }
   }
   const student = await Student.findOneAndUpdate(filter, body, { new: true });
-  if (student && 'parentEmail' in body) {
+  if (student && "parentEmail" in body) {
     await syncParentAccount(student, by);
   }
   return student;
 }
 
 const defaultScheduleTimes = [
-  ['09:00', '10:15'],
-  ['10:30', '11:45'],
-  ['12:00', '13:15'],
-  ['14:00', '15:15'],
-  ['15:30', '16:30'],
-  ['16:30', '17:30']
+  ["09:00", "10:15"],
+  ["10:30", "11:45"],
+  ["12:00", "13:15"],
+  ["14:00", "15:15"],
+  ["15:30", "16:30"],
+  ["16:30", "17:30"],
 ];
 
 function displayTime(startTime, endTime) {
-  const to12 = value => {
-    if (!value || !value.includes(':')) return value || '';
-    let [hour, minute] = value.split(':').map(Number);
-    const suffix = hour >= 12 ? 'PM' : 'AM';
+  const to12 = (value) => {
+    if (!value || !value.includes(":")) return value || "";
+    let [hour, minute] = value.split(":").map(Number);
+    const suffix = hour >= 12 ? "PM" : "AM";
     hour = hour % 12 || 12;
-    return `${hour}:${String(minute).padStart(2, '0')} ${suffix}`;
+    return `${hour}:${String(minute).padStart(2, "0")} ${suffix}`;
   };
-  return `${to12(startTime)}${endTime ? ' - ' + to12(endTime) : ''}`;
+  return `${to12(startTime)}${endTime ? " - " + to12(endTime) : ""}`;
 }
 
 export async function normalizeSubjectPayload(payload, user) {
@@ -427,11 +573,12 @@ export async function normalizeSubjectPayload(payload, user) {
 
   if (courseValue) {
     const courseOr = [{ name: courseValue }, { code: courseValue }];
-    if (mongoose.Types.ObjectId.isValid(courseValue)) courseOr.unshift({ _id: courseValue });
+    if (mongoose.Types.ObjectId.isValid(courseValue))
+      courseOr.unshift({ _id: courseValue });
     const courseDoc = await Course.findOne({
       college: user.college,
       $or: courseOr,
-      ...(dept ? { department: dept } : {})
+      ...(dept ? { department: dept } : {}),
     }).lean();
     if (courseDoc) {
       courseValue = courseDoc.name;
@@ -440,7 +587,10 @@ export async function normalizeSubjectPayload(payload, user) {
     }
   }
 
-  if (!courseValue) throw badRequest('Course is required — a subject must belong to a specific course.');
+  if (!courseValue)
+    throw badRequest(
+      "Course is required — a subject must belong to a specific course.",
+    );
   body.course = courseValue;
   body.department = dept;
   body.semester = Number(body.semester || body.sem || 1);
@@ -459,7 +609,7 @@ export async function syncSubjectSchedule(subject, user) {
     course,
     semester,
     $or: [{ subject: subject._id }, { subjectName: subject.name }],
-    ...live
+    ...live,
   });
 
   const subjectCount = await Subject.countDocuments({
@@ -467,16 +617,16 @@ export async function syncSubjectSchedule(subject, user) {
     department: subject.department,
     course,
     semester,
-    ...live
+    ...live,
   });
   const idx = Math.max(0, subjectCount - 1) % defaultScheduleTimes.length;
   const [startTime, endTime] = existing
     ? [existing.startTime, existing.endTime]
     : defaultScheduleTimes[idx];
-  const day = existing?.day || 'Mon';
+  const day = existing?.day || "Mon";
 
   const teacher = subject.teacher
-    ? await User.findById(subject.teacher).select('name').lean()
+    ? await User.findById(subject.teacher).select("name").lean()
     : null;
 
   const update = {
@@ -486,17 +636,17 @@ export async function syncSubjectSchedule(subject, user) {
     time: displayTime(startTime, endTime),
     subjectName: subject.name,
     subject: subject._id,
-    teacherName: teacher?.name || existing?.teacherName || '',
+    teacherName: teacher?.name || existing?.teacherName || "",
     teacher: subject.teacher || existing?.teacher || null,
-    room: existing?.room || '',
-    type: subject.type || existing?.type || 'Lecture',
+    room: existing?.room || "",
+    type: subject.type || existing?.type || "Lecture",
     course,
     semester,
     college: subject.college,
     department: subject.department,
     active: true,
     isDeleted: false,
-    updatedBy: user.id || user._id
+    updatedBy: user.id || user._id,
   };
 
   return Schedule.findOneAndUpdate(
@@ -505,10 +655,10 @@ export async function syncSubjectSchedule(subject, user) {
       department: subject.department,
       course,
       semester,
-      $or: [{ subject: subject._id }, { subjectName: subject.name }]
+      $or: [{ subject: subject._id }, { subjectName: subject.name }],
     },
     { $set: update, $setOnInsert: { createdBy: user.id || user._id } },
-    { upsert: true, new: true }
+    { upsert: true, new: true },
   );
 }
 
@@ -521,15 +671,17 @@ export async function syncSubjectSchedule(subject, user) {
 
 // Convert "HH:MM" (24h) to minutes-since-midnight for range comparisons.
 function toMinutes(t) {
-  if (!t || typeof t !== 'string' || !t.includes(':')) return null;
-  const [h, m] = t.split(':').map(Number);
+  if (!t || typeof t !== "string" || !t.includes(":")) return null;
+  const [h, m] = t.split(":").map(Number);
   if (Number.isNaN(h) || Number.isNaN(m)) return null;
   return h * 60 + m;
 }
 
 export function timesOverlap(aStart, aEnd, bStart, bEnd) {
-  const as = toMinutes(aStart), ae = toMinutes(aEnd);
-  const bs = toMinutes(bStart), be = toMinutes(bEnd);
+  const as = toMinutes(aStart),
+    ae = toMinutes(aEnd);
+  const bs = toMinutes(bStart),
+    be = toMinutes(bEnd);
   if (as == null || bs == null) return false;
   const aEndEff = ae != null ? ae : as + 1;
   const bEndEff = be != null ? be : bs + 1;
@@ -574,17 +726,20 @@ export function validateLectureDuration(startTime, endTime) {
   const endInMinutes = toMinutes(endTime);
 
   if (startInMinutes == null || endInMinutes == null) {
-    return { ok: false, message: 'Start time and end time are both required.' };
+    return { ok: false, message: "Start time and end time are both required." };
   }
 
   const durationInMinutes = endInMinutes - startInMinutes;
 
   if (durationInMinutes <= 0) {
-    return { ok: false, message: 'End time must be after start time.' };
+    return { ok: false, message: "End time must be after start time." };
   }
 
   if (durationInMinutes < MINIMUM_LECTURE_DURATION_MINUTES) {
-    return { ok: false, message: `A lecture must be at least ${MINIMUM_LECTURE_DURATION_MINUTES} minutes long.` };
+    return {
+      ok: false,
+      message: `A lecture must be at least ${MINIMUM_LECTURE_DURATION_MINUTES} minutes long.`,
+    };
   }
 
   return { ok: true };
@@ -608,14 +763,18 @@ export function validateLectureDuration(startTime, endTime) {
 export function validateAttendanceDateIsNotInTheFuture(dateToCheck) {
   const parsedDate = new Date(dateToCheck);
   if (Number.isNaN(parsedDate.getTime())) {
-    return { ok: false, message: 'That date is not valid.' };
+    return { ok: false, message: "That date is not valid." };
   }
 
   const today = new Date();
   today.setHours(23, 59, 59, 999); // end of today — so "today" itself is always allowed
 
   if (parsedDate.getTime() > today.getTime()) {
-    return { ok: false, message: 'Attendance cannot be marked for a future date. Please choose today or an earlier date.' };
+    return {
+      ok: false,
+      message:
+        "Attendance cannot be marked for a future date. Please choose today or an earlier date.",
+    };
   }
 
   return { ok: true };
@@ -624,22 +783,43 @@ export function validateAttendanceDateIsNotInTheFuture(dateToCheck) {
 // Resolve a schedule slot's subject strictly against the Admin-created master
 // Subject list. Never creates a subject — throws if no match is found, so a
 // HOD/Teacher can never introduce a subject that Admin hasn't defined.
-export async function resolveSubjectForSlot({ college, department, course, semester, subjectId, subjectName }) {
+export async function resolveSubjectForSlot({
+  college,
+  department,
+  course,
+  semester,
+  subjectId,
+  subjectName,
+}) {
   let subject = null;
   if (subjectId && mongoose.Types.ObjectId.isValid(subjectId)) {
-    subject = await Subject.findOne({ _id: subjectId, college, department, ...live });
+    subject = await Subject.findOne({
+      _id: subjectId,
+      college,
+      department,
+      ...live,
+    });
   }
   if (!subject && subjectName) {
     subject = await Subject.findOne({
-      college, department, ...live,
-      name: new RegExp(`^${String(subjectName).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+      college,
+      department,
+      ...live,
+      name: new RegExp(
+        `^${String(subjectName)
+          .trim()
+          .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
+        "i",
+      ),
       $or: [{ course }, { course: { $exists: false } }],
     });
   }
   if (!subject) {
     throw Object.assign(
-      new Error(`"${subjectName || subjectId || 'Subject'}" is not in the Admin-created subject list for this course/semester. Ask Admin to add it first.`),
-      { status: 400 }
+      new Error(
+        `"${subjectName || subjectId || "Subject"}" is not in the Admin-created subject list for this course/semester. Ask Admin to add it first.`,
+      ),
+      { status: 400 },
     );
   }
   return subject;
@@ -651,16 +831,37 @@ export async function resolveSubjectForSlot({ college, department, course, semes
 //   (b) teacher conflict — the given teacher already has an overlapping lecture
 //       on that day, in any class.
 // Returns a descriptive object if a conflict exists, otherwise null.
-export async function findConflictingSlot({ college, department, course, semester, day, startTime, endTime, teacher, excludeId }) {
-  const baseFilter = { college, ...live, day, ...(excludeId ? { _id: { $ne: excludeId } } : {}) };
+export async function findConflictingSlot({
+  college,
+  department,
+  course,
+  semester,
+  day,
+  startTime,
+  endTime,
+  teacher,
+  excludeId,
+}) {
+  const baseFilter = {
+    college,
+    ...live,
+    day,
+    ...(excludeId ? { _id: { $ne: excludeId } } : {}),
+  };
 
-  const classSlots = await Schedule.find({ ...baseFilter, department, course, semester })
-    .populate('teacher', 'name').lean();
+  const classSlots = await Schedule.find({
+    ...baseFilter,
+    department,
+    course,
+    semester,
+  })
+    .populate("teacher", "name")
+    .lean();
   for (const slot of classSlots) {
     if (timesOverlap(startTime, endTime, slot.startTime, slot.endTime)) {
       return {
-        type: 'class',
-        message: `This class already has a lecture scheduled during this time by ${slot.teacher?.name || slot.teacherName || 'another teacher'}.`,
+        type: "class",
+        message: `This class already has a lecture scheduled during this time by ${slot.teacher?.name || slot.teacherName || "another teacher"}.`,
       };
     }
   }
@@ -670,8 +871,8 @@ export async function findConflictingSlot({ college, department, course, semeste
     for (const slot of teacherSlots) {
       if (timesOverlap(startTime, endTime, slot.startTime, slot.endTime)) {
         return {
-          type: 'teacher',
-          message: `This teacher already has a lecture scheduled during this time (${slot.course || ''} Sem ${slot.semester || ''}).`,
+          type: "teacher",
+          message: `This teacher already has a lecture scheduled during this time (${slot.course || ""} Sem ${slot.semester || ""}).`,
         };
       }
     }
@@ -688,20 +889,43 @@ export async function findConflictingSlot({ college, department, course, semeste
 // actual Attendance records submitted, not just the Schedule, since a
 // teacher's marking form takes a free-typed time that isn't required to
 // exactly match a Schedule slot.
-export async function findAttendanceTimeConflict({ college, department, course, semester, division, day, date, startTime, endTime, excludeTeacher }) {
+export async function findAttendanceTimeConflict({
+  college,
+  department,
+  course,
+  semester,
+  division,
+  day,
+  date,
+  startTime,
+  endTime,
+  excludeTeacher,
+}) {
   if (!startTime || !endTime) return null; // nothing to compare against
-  const dayStart = new Date(date); dayStart.setHours(0, 0, 0, 0);
-  const dayEnd = new Date(date); dayEnd.setHours(23, 59, 59, 999);
+  const dayStart = new Date(date);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(date);
+  dayEnd.setHours(23, 59, 59, 999);
   const candidates = await Attendance.find({
-    college, department, course, semester, ...live,
-    division: division || '', date: { $gte: dayStart, $lte: dayEnd },
+    college,
+    department,
+    course,
+    semester,
+    ...live,
+    division: division || "",
+    date: { $gte: dayStart, $lte: dayEnd },
     ...(excludeTeacher ? { teacher: { $ne: excludeTeacher } } : {}),
-  }).populate('teacher', 'name').select('time teacher subjectName').lean();
+  })
+    .populate("teacher", "name")
+    .select("time teacher subjectName")
+    .lean();
   for (const c of candidates) {
     if (!c.time) continue;
     const [cStart, cEnd] = String(c.time).split(/\s*[-–]\s*/);
     if (timesOverlap(startTime, endTime, cStart, cEnd)) {
-      return { message: `${c.teacher?.name || 'Another teacher'} already has attendance marked for this class from ${cStart} to ${cEnd || ''}. No lecture may overlap another for the same class.` };
+      return {
+        message: `${c.teacher?.name || "Another teacher"} already has attendance marked for this class from ${cStart} to ${cEnd || ""}. No lecture may overlap another for the same class.`,
+      };
     }
   }
   return null;
@@ -711,10 +935,24 @@ export async function collegeSummary(collegeId) {
   const [departments, students, teachers, principals] = await Promise.all([
     Department.countDocuments({ college: collegeId, ...live }),
     Student.countDocuments({ college: collegeId, ...live }),
-    User.countDocuments({ college: collegeId, role: { $in: ['teacher', 'hod', 'co_hod'] }, ...live }),
-    User.countDocuments({ college: collegeId, role: { $in: ['admin', 'principal'] }, ...live })
+    User.countDocuments({
+      college: collegeId,
+      role: { $in: ["teacher", "hod", "co_hod"] },
+      ...live,
+    }),
+    User.countDocuments({
+      college: collegeId,
+      role: { $in: ["admin", "principal"] },
+      ...live,
+    }),
   ]);
-  return { departments, students, teachers, principals, totalPeople: students + teachers + principals };
+  return {
+    departments,
+    students,
+    teachers,
+    principals,
+    totalPeople: students + teachers + principals,
+  };
 }
 
 export async function adminOverview(user) {
@@ -722,57 +960,97 @@ export async function adminOverview(user) {
   const [departments, students, teachers, notices, hods] = await Promise.all([
     Department.countDocuments({ ...scope, ...live }),
     Student.countDocuments({ ...scope, ...live }),
-    User.countDocuments({ ...scope, role: 'teacher', ...live }),
+    User.countDocuments({ ...scope, role: "teacher", ...live }),
     Notice.countDocuments({ ...scope, ...live }),
-    User.countDocuments({ ...scope, role: { $in: ['hod', 'co_hod'] }, ...live })
+    User.countDocuments({
+      ...scope,
+      role: { $in: ["hod", "co_hod"] },
+      ...live,
+    }),
   ]);
-  return { departments, students, teachers, hods, notices, users: teachers + students + hods };
+  return {
+    departments,
+    students,
+    teachers,
+    hods,
+    notices,
+    users: teachers + students + hods,
+  };
 }
 
 export async function studentBundle(student) {
   const course = student.course || student.courseName;
   const semester = Number(student.semester || student.sem || 0);
-  const filter = { college: student.college, department: student.department, ...live };
+  const filter = {
+    college: student.college,
+    department: student.department,
+    ...live,
+  };
   const classFilter = {
     ...filter,
     ...(course ? { course } : {}),
-    ...(semester ? { semester } : {})
+    ...(semester ? { semester } : {}),
   };
-  const [subjects, notices, marks, timetable, syllabus, attendance] = await Promise.all([
-    Subject.find(classFilter).lean(),
-    Notice.find({
-      college: student.college,
-      ...live,
-      $and: [
-        { $or: [{ department: student.department }, { department: null }, { department: { $exists: false } }] },
-        { $or: [
-          { course: { $in: [null, undefined, ''] } },
-          { course: student.course, semester: Number(student.semester || student.sem || 0) },
-        ] },
-        { $or: [{ targetRole: 'all' }, { targetRole: { $exists: false } }, { targetRole: 'student' }] },
-      ],
-    }).sort({ createdAt: -1 }).populate('author', 'name').populate('createdBy', 'name').lean(),
-    Mark.find({
-      student: student._id || student.id,
-      ...live,
-      // A student sees a mark once the teacher/CC has published it, OR
-      // immediately if it has their own self-uploaded marksheet screenshot
-      // attached (that's their own submission, not a result being withheld).
-      // Keyed on `image` presence (only ever set by the student's own
-      // upload route) rather than `enteredBy`, so a screenshot uploaded
-      // alongside an existing-but-unpublished teacher-entered number can't
-      // accidentally leak that number early.
-      $or: [{ published: true }, { image: { $exists: true, $nin: ['', null] } }],
-    })
-      .populate('subject', 'name code')
-      .lean(),
-    Schedule.find(classFilter).lean(),
-    Syllabus.find(classFilter).lean(),
-    Attendance.find({ student: student._id || student.id, ...live })
-      .populate('subject', 'name code')
-      .populate('teacher', 'name')
-      .lean()
-  ]);
+  const [subjects, notices, marks, timetable, syllabus, attendance] =
+    await Promise.all([
+      Subject.find(classFilter).lean(),
+      Notice.find({
+        college: student.college,
+        ...live,
+        $and: [
+          {
+            $or: [
+              { department: student.department },
+              { department: null },
+              { department: { $exists: false } },
+            ],
+          },
+          {
+            $or: [
+              { course: { $in: [null, undefined, ""] } },
+              {
+                course: student.course,
+                semester: Number(student.semester || student.sem || 0),
+              },
+            ],
+          },
+          {
+            $or: [
+              { targetRole: "all" },
+              { targetRole: { $exists: false } },
+              { targetRole: "student" },
+            ],
+          },
+        ],
+      })
+        .sort({ createdAt: -1 })
+        .populate("author", "name")
+        .populate("createdBy", "name")
+        .lean(),
+      Mark.find({
+        student: student._id || student.id,
+        ...live,
+        // A student sees a mark once the teacher/CC has published it, OR
+        // immediately if it has their own self-uploaded marksheet screenshot
+        // attached (that's their own submission, not a result being withheld).
+        // Keyed on `image` presence (only ever set by the student's own
+        // upload route) rather than `enteredBy`, so a screenshot uploaded
+        // alongside an existing-but-unpublished teacher-entered number can't
+        // accidentally leak that number early.
+        $or: [
+          { published: true },
+          { image: { $exists: true, $nin: ["", null] } },
+        ],
+      })
+        .populate("subject", "name code")
+        .lean(),
+      Schedule.find(classFilter).lean(),
+      Syllabus.find(classFilter).lean(),
+      Attendance.find({ student: student._id || student.id, ...live })
+        .populate("subject", "name code")
+        .populate("teacher", "name")
+        .lean(),
+    ]);
   return { subjects, notices, marks, timetable, syllabus, attendance };
 }
 

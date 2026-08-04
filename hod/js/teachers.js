@@ -240,11 +240,7 @@ async function saveTchrEdit() {
     const digits = String(patch.emergencyContact || "")
       .trim()
       .replace(/[\s\-()]/g, "");
-    if (!digits) {
-      showToast("Emergency contact number is required.", true);
-      return;
-    }
-    if (!/^\+?\d{10,15}$/.test(digits)) {
+    if (digits && !/^\+?\d{10,15}$/.test(digits)) {
       showToast(
         "Emergency contact must be a valid mobile number (10-15 digits).",
         true,
