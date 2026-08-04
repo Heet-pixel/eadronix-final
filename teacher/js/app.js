@@ -28,6 +28,10 @@ let stuFilterCourse = "";
 let stuFilterSem = "";
 let teacherClasses = [];
 let myTeacherClasses = []; // only classes this teacher actually teaches — used for "Send Notice"
+// Cache of the roster for the currently selected course+semester, used to
+// populate the Practical roll-range <select> dropdowns (attendance.js) so a
+// teacher picks an existing student's roll number instead of typing one.
+let attClassStudentsCache = { key: "", students: [] };
 
 async function init() {
   // Apply saved theme first
@@ -64,7 +68,9 @@ async function init() {
       currentTeacher.timetable = u.timetable || {};
       currentTeacher.isClassTeacher = u.isClassTeacher || false;
       currentTeacher.classTeacherOf = u.classTeacherOf || null;
-      currentTeacher.ccAssignments = Array.isArray(u.ccAssignments) ? u.ccAssignments : [];
+      currentTeacher.ccAssignments = Array.isArray(u.ccAssignments)
+        ? u.ccAssignments
+        : [];
       currentTeacher.course = u.course || "";
     }
   } catch (_) {
@@ -153,30 +159,30 @@ async function init() {
 }
 
 function _applyIdentity() {
-    const { name, dept, initials, avatar } = currentTeacher;
+  const { name, dept, initials, avatar } = currentTeacher;
 
-    // Update text
-    const textIds = {
-        sidebarName: name,
-        headerName: name,
-        sidebarDept: dept
-    };
+  // Update text
+  const textIds = {
+    sidebarName: name,
+    headerName: name,
+    sidebarDept: dept,
+  };
 
-    Object.entries(textIds).forEach(([id, val]) => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = val;
-    });
+  Object.entries(textIds).forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  });
 
-    // Update all avatars
-    ['sidebarAv', 'headerAv', 'sb-av', 'profAv'].forEach(id => {
-        const el = document.getElementById(id);
-        if (!el) return;
+  // Update all avatars
+  ["sidebarAv", "headerAv", "sb-av", "profAv"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
 
-        el.innerHTML = avatar
-            ? `<img src="${avatar}" alt="${name}"
+    el.innerHTML = avatar
+      ? `<img src="${avatar}" alt="${name}"
                  style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
-            : initials;
-    });
+      : initials;
+  });
 }
 
 document.addEventListener("DOMContentLoaded", init);

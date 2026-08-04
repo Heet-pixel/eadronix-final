@@ -17,43 +17,59 @@
  *     bloat the index (subject is optional in some records).
  */
 
-import mongoose from 'mongoose';
-import { baseFields, toJSON } from './BaseFields.js';
+import mongoose from "mongoose";
+import { baseFields, toJSON } from "./BaseFields.js";
 
 const AttendanceSchema = new mongoose.Schema(
   {
-    date:        { type: Date, default: Date.now },
-    subject:     { type: mongoose.Schema.Types.ObjectId, ref: 'Subject' },
+    date: { type: Date, default: Date.now },
+    subject: { type: mongoose.Schema.Types.ObjectId, ref: "Subject" },
     subjectName: String,
-    teacher:     { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    student:     { type: mongoose.Schema.Types.ObjectId, ref: 'Student' },
-    status:      { type: String, enum: ['present', 'absent', 'leave'], default: 'present' },
-    course:      String,
-    semester:    Number,
+    teacher: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    student: { type: mongoose.Schema.Types.ObjectId, ref: "Student" },
+    status: {
+      type: String,
+      enum: ["present", "absent", "leave"],
+      default: "present",
+    },
+    course: String,
+    semester: Number,
     // Spec item 4 (Attendance History / Edit): these three fields, together
     // with date/course/semester/subject/teacher, identify "one lecture" so a
     // past submission can be edited in place instead of creating a new one.
-    division:    { type: String, default: '' },
-    type:        { type: String, default: 'Lecture' },
-    time:        { type: String, default: '' }, // e.g. "09:00 - 10:00", captured at marking time
-    topic:       { type: String, default: '' },
-    isProxy:     { type: Boolean, default: false },
-    proxyForSubject:     { type: mongoose.Schema.Types.ObjectId, ref: 'Subject' },
-    proxyForSubjectName: { type: String, default: '' },
-    college:     { type: mongoose.Schema.Types.ObjectId, ref: 'College' },
-    department:  { type: mongoose.Schema.Types.ObjectId, ref: 'Department' },
+    division: { type: String, default: "" },
+    type: { type: String, default: "Lecture" },
+    time: { type: String, default: "" }, // e.g. "09:00 - 10:00", captured at marking time
+    topic: { type: String, default: "" },
+    // Practical/Lab roll-number batching: when a teacher marks a Practical
+    // for only part of the class (e.g. roll 1-21), these capture that exact
+    // batch so (a) the seat grid can be rebuilt to the same subset on edit,
+    // and (b) two/three teachers can mark different practical batches of the
+    // same class at the very same time slot without tripping the overlapping-
+    // lecture guard, which only blocks a genuine clash (same batch, or one of
+    // the sessions covering the whole class). `allStudents: true` (the
+    // default) means "whole class" — the same behaviour as before this
+    // feature existed, so old Theory/Tutorial/Seminar records are unaffected.
+    allStudents: { type: Boolean, default: true },
+    rollRangeStart: { type: String, default: "" },
+    rollRangeEnd: { type: String, default: "" },
+    isProxy: { type: Boolean, default: false },
+    proxyForSubject: { type: mongoose.Schema.Types.ObjectId, ref: "Subject" },
+    proxyForSubjectName: { type: String, default: "" },
+    college: { type: mongoose.Schema.Types.ObjectId, ref: "College" },
+    department: { type: mongoose.Schema.Types.ObjectId, ref: "Department" },
     ...baseFields,
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // ── Indexes ───────────────────────────────────────────────────────────────────
 
 // Single-field indexes
-AttendanceSchema.index({ student:    1 });
-AttendanceSchema.index({ teacher:    1 });
-AttendanceSchema.index({ date:       1 });
-AttendanceSchema.index({ college:    1 });
+AttendanceSchema.index({ student: 1 });
+AttendanceSchema.index({ teacher: 1 });
+AttendanceSchema.index({ date: 1 });
+AttendanceSchema.index({ college: 1 });
 AttendanceSchema.index({ department: 1 });
 // (standalone {isDeleted:1} index removed — already declared via baseFields.isDeleted's `index:true`, was causing a duplicate-index warning)
 
@@ -67,10 +83,16 @@ AttendanceSchema.index({ student: 1, date: -1 });
 AttendanceSchema.index({ teacher: 1, date: -1 });
 
 // Compound: grouping records into "lecture sessions" for Attendance History (spec item 4)
-AttendanceSchema.index({ teacher: 1, course: 1, semester: 1, subject: 1, date: -1 });
+AttendanceSchema.index({
+  teacher: 1,
+  course: 1,
+  semester: 1,
+  subject: 1,
+  date: -1,
+});
 
 // Compound: HOD / admin report queries
 AttendanceSchema.index({ college: 1, department: 1, semester: 1, date: -1 });
 
 toJSON(AttendanceSchema);
-export default mongoose.model('Attendance', AttendanceSchema);
+export default mongoose.model("Attendance", AttendanceSchema);

@@ -525,19 +525,11 @@ export async function updateStudentAndSyncParent(filter, rawBody, by) {
     });
   }
   if ("parentEmail" in body) {
-    const trimmedParentEmail = String(body.parentEmail || "").trim();
-    if (trimmedParentEmail) {
-      body.parentEmail = await validateParentEmail({
-        parentEmail: body.parentEmail,
-        studentEmail: body.email || existing.email,
-        excludeStudentId: existing._id,
-      });
-    } else {
-      // Edit forms resend every field's current value, including ones the
-      // user never touched. Don't force "required" on a field that simply
-      // wasn't filled in this edit, and don't blank out an existing value.
-      delete body.parentEmail;
-    }
+    body.parentEmail = await validateParentEmail({
+      parentEmail: body.parentEmail,
+      studentEmail: body.email || existing.email,
+      excludeStudentId: existing._id,
+    });
   }
   const student = await Student.findOneAndUpdate(filter, body, { new: true });
   if (student && "parentEmail" in body) {
@@ -881,6 +873,61 @@ export async function findConflictingSlot({
   return null;
 }
 
+// Roll-number range helper (Practical/Lab batching). Mirrors the numeric-
+// aware comparison used elsewhere (student.routes.js's local rollInRange) so
+// "1".."21" compares numerically rather than lexicographically (which would
+// wrongly put "2" after "10").
+export function isRollWithinRange(roll, start, end) {
+  if (!start && !end) return true; // no range given = whole class
+  const value = String(roll || "").trim();
+  const from = String(start || "").trim();
+  const to = String(end || "").trim();
+  if (!value || !from || !to) return false;
+  if (/^\d+$/.test(value) && /^\d+$/.test(from) && /^\d+$/.test(to)) {
+    const n = BigInt(value),
+      a = BigInt(from),
+      b = BigInt(to);
+    return n >= (a < b ? a : b) && n <= (a < b ? b : a);
+  }
+  const low =
+    from.localeCompare(to, undefined, { numeric: true }) <= 0 ? from : to;
+  const high = low === from ? to : from;
+  return (
+    value.localeCompare(low, undefined, { numeric: true }) >= 0 &&
+    value.localeCompare(high, undefined, { numeric: true }) <= 0
+  );
+}
+
+// Do two roll-number ranges intersect? A missing/empty range on either side
+// (or an explicit "all students" session) is treated as covering the WHOLE
+// class, so it overlaps with everything — this preserves the original
+// behaviour for Theory/Tutorial/Seminar sessions that never had a roll range.
+export function rollRangesOverlap(aStart, aEnd, bStart, bEnd) {
+  const a1 = String(aStart || "").trim(),
+    a2 = String(aEnd || "").trim();
+  const b1 = String(bStart || "").trim(),
+    b2 = String(bEnd || "").trim();
+  if (!a1 || !a2 || !b1 || !b2) return true; // one side is "all students"
+  if (
+    /^\d+$/.test(a1) &&
+    /^\d+$/.test(a2) &&
+    /^\d+$/.test(b1) &&
+    /^\d+$/.test(b2)
+  ) {
+    const aLo = BigInt(a1) < BigInt(a2) ? BigInt(a1) : BigInt(a2);
+    const aHi = aLo === BigInt(a1) ? BigInt(a2) : BigInt(a1);
+    const bLo = BigInt(b1) < BigInt(b2) ? BigInt(b1) : BigInt(b2);
+    const bHi = bLo === BigInt(b1) ? BigInt(b2) : BigInt(b1);
+    return aLo <= bHi && bLo <= aHi;
+  }
+  const cmp = (x, y) => x.localeCompare(y, undefined, { numeric: true });
+  const aLo = cmp(a1, a2) <= 0 ? a1 : a2,
+    aHi = aLo === a1 ? a2 : a1;
+  const bLo = cmp(b1, b2) <= 0 ? b1 : b2,
+    bHi = bLo === b1 ? b2 : b1;
+  return cmp(aLo, bHi) <= 0 && cmp(bLo, aHi) <= 0;
+}
+
 // Spec: attendance marking must respect the same "no overlapping lecture for
 // this class" rule as the timetable itself — if Teacher A already marked
 // attendance for BCA Sem 2 Division A from 10:00-11:00, Teacher B cannot mark
@@ -889,6 +936,14 @@ export async function findConflictingSlot({
 // actual Attendance records submitted, not just the Schedule, since a
 // teacher's marking form takes a free-typed time that isn't required to
 // exactly match a Schedule slot.
+//
+// Practical/Lab exception: if BOTH the new submission and an existing one
+// are scoped to a specific, non-overlapping roll-number batch (e.g. 1-21 vs
+// 22-45) — rather than the whole class — they are different physical lab
+// groups meeting at the same time and are allowed to coexist. Any session
+// marked "All Students" (or with no roll range at all, e.g. every Theory
+// lecture) still conflicts with anything overlapping it in time, exactly as
+// before.
 export async function findAttendanceTimeConflict({
   college,
   department,
@@ -900,6 +955,9 @@ export async function findAttendanceTimeConflict({
   startTime,
   endTime,
   excludeTeacher,
+  rollRangeStart,
+  rollRangeEnd,
+  allStudents,
 }) {
   if (!startTime || !endTime) return null; // nothing to compare against
   const dayStart = new Date(date);
@@ -917,14 +975,38 @@ export async function findAttendanceTimeConflict({
     ...(excludeTeacher ? { teacher: { $ne: excludeTeacher } } : {}),
   })
     .populate("teacher", "name")
-    .select("time teacher subjectName")
+    .select("time teacher subjectName allStudents rollRangeStart rollRangeEnd")
     .lean();
+
+  // "Whole class" = explicitly flagged allStudents, OR no roll range given at
+  // all (every pre-existing record, and every non-Practical type, has no
+  // roll range — so it always behaves as "whole class", same as before).
+  const requestWholeClass =
+    allStudents === true || !(rollRangeStart && rollRangeEnd);
+
   for (const c of candidates) {
     if (!c.time) continue;
     const [cStart, cEnd] = String(c.time).split(/\s*[-–]\s*/);
-    if (timesOverlap(startTime, endTime, cStart, cEnd)) {
+    if (!timesOverlap(startTime, endTime, cStart, cEnd)) continue;
+
+    const candidateIsWhole =
+      c.allStudents === true || !(c.rollRangeStart && c.rollRangeEnd);
+
+    if (requestWholeClass || candidateIsWhole) {
       return {
         message: `${c.teacher?.name || "Another teacher"} already has attendance marked for this class from ${cStart} to ${cEnd || ""}. No lecture may overlap another for the same class.`,
+      };
+    }
+    if (
+      rollRangesOverlap(
+        rollRangeStart,
+        rollRangeEnd,
+        c.rollRangeStart,
+        c.rollRangeEnd,
+      )
+    ) {
+      return {
+        message: `${c.teacher?.name || "Another teacher"} already has attendance marked for roll ${c.rollRangeStart}-${c.rollRangeEnd} from ${cStart} to ${cEnd || ""}, which overlaps the roll range you selected.`,
       };
     }
   }

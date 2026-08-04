@@ -273,6 +273,35 @@
           <div class="form-group"><label>End Time</label><input type="time" id="attEnd"></div>
           <div class="form-group"><label>Division (optional)</label><input type="text" id="attDivision" placeholder="e.g. A"></div>
         </div>
+
+        <!-- Practical/Lab roll-number batching: only shown when Type = Practical.
+             Lets a teacher mark attendance for just one roll-number batch (e.g.
+             1-21) so 2-3 teachers can mark different lab batches of the same
+             class at the very same time slot without clashing. -->
+        <div id="attRollRangeWrap" style="display:none;margin-top:6px">
+          <label class="proxy-toggle">
+            <input type="checkbox" id="attAllStudents" checked onchange="toggleRollRangeInputs()">
+            <span>All Students (whole class)</span>
+          </label>
+          <div class="form-row" id="attRollInputs" style="display:none;margin-top:8px">
+            <div class="form-group">
+              <label>Start Roll No.</label>
+              <select id="attRollStart" onchange="normalizeRollRange()">
+                <option value="">-- Select Roll --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>End Roll No.</label>
+              <select id="attRollEnd" onchange="normalizeRollRange()">
+                <option value="">-- Select Roll --</option>
+              </select>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--muted,#888);font-weight:600;margin-top:6px">
+            Only students within this roll range will appear below and get marked. Leave "All Students" checked to mark the whole class. Other teachers can mark a different roll range for a different lab at the same time.
+          </div>
+        </div>
+
         <div class="form-group">
           <label>Topic taught today (optional)</label>
           <input type="text" id="attTopic" placeholder="e.g. Joins, normalization, recursion practice">

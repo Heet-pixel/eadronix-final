@@ -18,6 +18,7 @@ import {
   validatePdfDataUri,
   validateAttendanceDateIsNotInTheFuture,
   validateLectureDuration,
+  isRollWithinRange,
 } from "../controllers/common.js";
 import { hardDeleteCascade } from "../utils/hardDelete.js";
 import { storeDataUri } from "../utils/gridfs.js";
@@ -375,12 +376,15 @@ router.get(
     const bySubject = {};
     for (const a of records) {
       const name = a.subject?.name || a.subjectName || "Unknown Subject";
-      if (!bySubject[name]) bySubject[name] = { name, present: 0, absent: 0, total: 0 };
+      if (!bySubject[name])
+        bySubject[name] = { name, present: 0, absent: 0, total: 0 };
       bySubject[name].total++;
       if (a.status === "present") bySubject[name].present++;
       else bySubject[name].absent++;
     }
-    const subjects = Object.values(bySubject).sort((a, b) => a.name.localeCompare(b.name));
+    const subjects = Object.values(bySubject).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
 
     ok(res, {
       success: true,
@@ -503,6 +507,75 @@ router.post(
     const topic = String(req.body.topic || "").trim();
     const isProxy = Boolean(req.body.isProxy);
 
+    // Practical/Lab roll-number batching: a teacher marking a Practical can
+    // scope the lecture to just one roll-number range (e.g. 1-21) instead of
+    // the whole class, so several teachers can mark different lab batches of
+    // the same class at the same time slot. "Theory"/"Tutorial"/"Seminar"
+    // (or any Practical explicitly marked "All Students") always cover the
+    // whole class, exactly as before this feature existed.
+    const isPractical = String(type).trim().toLowerCase() === "practical";
+    let rollRangeStart = String(
+      req.body.rollRangeStart || req.body.rollStart || "",
+    ).trim();
+    let rollRangeEnd = String(
+      req.body.rollRangeEnd || req.body.rollEnd || "",
+    ).trim();
+    let allStudents =
+      req.body.allStudents !== undefined ? Boolean(req.body.allStudents) : true;
+    if (!isPractical) {
+      rollRangeStart = "";
+      rollRangeEnd = "";
+      allStudents = true;
+    } else if (allStudents) {
+      rollRangeStart = "";
+      rollRangeEnd = "";
+    } else {
+      if (!rollRangeStart || !rollRangeEnd) {
+        return fail(
+          res,
+          400,
+          'Select both a Start and End roll number for this practical, or choose "All Students".',
+        );
+      }
+      // Keep the stored range ascending regardless of the order typed in.
+      if (
+        /^\d+$/.test(rollRangeStart) &&
+        /^\d+$/.test(rollRangeEnd) &&
+        Number(rollRangeStart) > Number(rollRangeEnd)
+      ) {
+        [rollRangeStart, rollRangeEnd] = [rollRangeEnd, rollRangeStart];
+      }
+      // Defense in depth: confirm every student in this submission actually
+      // falls inside the chosen roll range, even though the UI already
+      // filters the seat grid to it — protects against a stale/edited
+      // request bypassing the client-side filter.
+      const submittedIds = rows
+        .map((r) => r.student || r.studentId)
+        .filter(Boolean);
+      if (submittedIds.length) {
+        const submittedStudents = await Student.find({
+          _id: { $in: submittedIds },
+        })
+          .select("roll rollNo rollNumber")
+          .lean();
+        const outOfRange = submittedStudents.some(
+          (st) =>
+            !isRollWithinRange(
+              st.roll || st.rollNo || st.rollNumber || "",
+              rollRangeStart,
+              rollRangeEnd,
+            ),
+        );
+        if (outOfRange) {
+          return fail(
+            res,
+            400,
+            `One or more selected students fall outside roll ${rollRangeStart}-${rollRangeEnd}.`,
+          );
+        }
+      }
+    }
+
     const dateCheck = validateAttendanceDateIsNotInTheFuture(sessionDate);
     if (!dateCheck.ok) return fail(res, 400, dateCheck.message);
 
@@ -533,6 +606,8 @@ router.post(
       subject: subjectDoc._id,
       division,
       time,
+      rollRangeStart,
+      rollRangeEnd,
       date: { $gte: dayStart, $lte: dayEnd },
     })
       .select("_id")
@@ -559,6 +634,9 @@ router.post(
       startTime: attendanceStartTime || "",
       endTime: attendanceEndTime || "",
       excludeTeacher: req.user.id,
+      rollRangeStart,
+      rollRangeEnd,
+      allStudents,
     });
     if (timeConflict) return fail(res, 409, timeConflict.message);
 
@@ -574,6 +652,9 @@ router.post(
         type,
         time,
         topic,
+        allStudents,
+        rollRangeStart,
+        rollRangeEnd,
         isProxy,
         proxyForSubject: isProxy ? subjectDoc._id : undefined,
         proxyForSubjectName: isProxy ? subjectDoc.name : "",
@@ -618,12 +699,21 @@ router.get(
   asyncHandler(async (req, res) => {
     const course = req.query.course;
     const semester = req.query.semester ? Number(req.query.semester) : null;
-    const isCC = course && semester
-      ? ccSemestersFor(req.user).some((a) => a.course === course && a.semester === semester)
-      : false;
+    const isCC =
+      course && semester
+        ? ccSemestersFor(req.user).some(
+            (a) => a.course === course && a.semester === semester,
+          )
+        : false;
 
     const filter = isCC
-      ? { college: req.user.college, department: req.user.department, course, semester, ...live }
+      ? {
+          college: req.user.college,
+          department: req.user.department,
+          course,
+          semester,
+          ...live,
+        }
       : { teacher: req.user.id, ...live };
     if (!isCC) {
       if (req.query.course) filter.course = req.query.course;
@@ -631,7 +721,7 @@ router.get(
     }
     const docs = await Attendance.find(filter)
       .select(
-        "date course semester subject subjectName division time type status topic isProxy teacher",
+        "date course semester subject subjectName division time type status topic isProxy teacher allStudents rollRangeStart rollRangeEnd",
       )
       .populate("teacher", "name")
       .lean();
@@ -646,6 +736,8 @@ router.get(
         division: d.division || "",
         time: d.time || "",
         day: dayKey(d.date),
+        rollRangeStart: d.rollRangeStart || "",
+        rollRangeEnd: d.rollRangeEnd || "",
       };
       const key = encodeSessionKey(parts);
       if (!sessions.has(key)) {
@@ -661,6 +753,9 @@ router.get(
           type: d.type || "Lecture",
           topic: d.topic || "",
           isProxy: !!d.isProxy,
+          allStudents: d.allStudents !== false,
+          rollRangeStart: d.rollRangeStart || "",
+          rollRangeEnd: d.rollRangeEnd || "",
           department: req.user.department,
           teacherName: d.teacher?.name || "",
           present: 0,
@@ -713,6 +808,8 @@ router.get(
           division: d.division || "",
           time: d.time || "",
           day: dayKey(d.date),
+          rollRangeStart: d.rollRangeStart || "",
+          rollRangeEnd: d.rollRangeEnd || "",
         }) === req.params.sessionKey,
     );
     if (!records.length)
@@ -730,6 +827,9 @@ router.get(
         type: records[0].type,
         topic: records[0].topic || "",
         isProxy: !!records[0].isProxy,
+        allStudents: records[0].allStudents !== false,
+        rollRangeStart: records[0].rollRangeStart || "",
+        rollRangeEnd: records[0].rollRangeEnd || "",
         date: records[0].date,
         uploadedAt: records[0].createdAt,
       },
@@ -782,6 +882,8 @@ router.put(
           division: d.division || "",
           time: d.time || "",
           day: dayKey(d.date),
+          rollRangeStart: d.rollRangeStart || "",
+          rollRangeEnd: d.rollRangeEnd || "",
         }) === req.params.sessionKey,
     );
     if (!sessionDocs.length)
@@ -1277,7 +1379,8 @@ router.get(
     const course = req.query.course || req.user.course;
     const examType = (req.query.examType || "").trim();
     if (!semester) return fail(res, 400, "semester is required.");
-    if (!examType) return fail(res, 400, "examType (the marks sheet name) is required.");
+    if (!examType)
+      return fail(res, 400, "examType (the marks sheet name) is required.");
 
     const isCC = ccSemestersFor(req.user).some(
       (a) => a.course === course && a.semester === semester,
@@ -1325,7 +1428,16 @@ router.get(
       ...live,
     }).lean();
 
-    ok(res, { success: true, isCC, subjects, students, marks, examType, course, semester });
+    ok(res, {
+      success: true,
+      isCC,
+      subjects,
+      students,
+      marks,
+      examType,
+      course,
+      semester,
+    });
   }),
 );
 
@@ -1337,12 +1449,15 @@ router.post(
   "/marks/grid-upsert",
   asyncHandler(async (req, res) => {
     const records = Array.isArray(req.body) ? req.body : req.body.records || [];
-    if (!records.length) return fail(res, 400, "At least one mark record is required.");
+    if (!records.length)
+      return fail(res, 400, "At least one mark record is required.");
 
     // Figure out which subject IDs this teacher is allowed to write to, once,
     // rather than re-deriving CC status per record.
     const semesters = [...new Set(records.map((r) => Number(r.semester)))];
-    const courses = [...new Set(records.map((r) => r.course || req.user.course))];
+    const courses = [
+      ...new Set(records.map((r) => r.course || req.user.course)),
+    ];
     const allowedSubjectIds = new Set();
     for (const course of courses) {
       for (const semester of semesters) {
@@ -1445,13 +1560,19 @@ router.patch(
       ...live,
       ...(isCC ? {} : { teacher: req.user.id }),
     };
-    const allowedSubjects = await Subject.find(subjectFilter).select("_id").lean();
+    const allowedSubjects = await Subject.find(subjectFilter)
+      .select("_id")
+      .lean();
     let allowedIds = allowedSubjects.map((s) => String(s._id));
     if (Array.isArray(subjectIds) && subjectIds.length) {
       allowedIds = allowedIds.filter((id) => subjectIds.includes(id));
     }
     if (!allowedIds.length)
-      return fail(res, 403, "You don't have permission to publish marks for this semester.");
+      return fail(
+        res,
+        403,
+        "You don't have permission to publish marks for this semester.",
+      );
 
     const result = await Mark.updateMany(
       {
@@ -1463,14 +1584,23 @@ router.patch(
       },
       {
         $set: publish
-          ? { published: true, publishedAt: new Date(), publishedBy: req.user.id }
+          ? {
+              published: true,
+              publishedAt: new Date(),
+              publishedBy: req.user.id,
+            }
           : { published: false },
       },
     );
 
     ok(
       res,
-      { success: true, matched: result.matchedCount, modified: result.modifiedCount, published: publish },
+      {
+        success: true,
+        matched: result.matchedCount,
+        modified: result.modifiedCount,
+        published: publish,
+      },
       publish
         ? `Marks sent to ${result.modifiedCount} student record(s).`
         : `Marks withdrawn from ${result.modifiedCount} student record(s).`,
