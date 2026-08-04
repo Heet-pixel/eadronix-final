@@ -239,7 +239,11 @@ async function buildHodProfile(user) {
     college: user.college,
     departmentId: user.department,
     department: departmentDoc?.name || "Department",
-    designation: user.designation || "HOD",
+    // Always derive from role rather than the stored `designation` string —
+    // existing accounts appointed before this rename still have "HOD"/
+    // "Co-HOD" saved in the DB; deriving from role keeps the display
+    // consistent without needing a data migration.
+    designation: user.role === "co_hod" ? "Co-Dept Admin" : "Dept Admin",
     courses: finalCourses,
     semesterCount,
     subjects: subjectsMap,

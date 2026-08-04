@@ -84,7 +84,6 @@ const Profile = {
           ${this._row("Course", u.course || u.courseName || "—")}
           ${this._row("Semester", u.semester || u.sem || "—")}
           ${this._row("Address", address)}
-          ${this._row("Joined On", joined)}
         </div>
 
         <p class="profile-card__hint">
@@ -115,7 +114,10 @@ const Profile = {
       if (!d.success) throw new Error(d.message || "Upload failed");
       this._render(d.student || d.profile || d.data);
       if (window.SAL_USER) window.SAL_USER.avatar = dataUri;
-      App._renderSidebarAvatar(dataUri, UI.initials(window.SAL_USER?.name || ""));
+      App._renderSidebarAvatar(
+        dataUri,
+        UI.initials(window.SAL_USER?.name || ""),
+      );
       UI.toast ? UI.toast("Profile photo updated.") : null;
     } catch (err) {
       if (statusEl) statusEl.textContent = err.message || "Upload failed.";

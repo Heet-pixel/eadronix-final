@@ -27,7 +27,7 @@ const HOD = {
             ${avatarCell(h)}
             <div><div style="font-weight:500">${h.name}</div></div>
           </div></td>
-          <td><span class="badge ${h.role === 'co_hod' ? 'bg' : 'bp'}">${h.role === 'co_hod' ? 'Co-HOD' : 'HOD'}</span></td>
+          <td><span class="badge ${h.role === 'co_hod' ? 'bg' : 'bp'}">${h.role === 'co_hod' ? 'Co-Dept Admin' : 'Dept Admin'}</span></td>
           <td>${h.department?.name || h.dept || '—'}</td>
           <td>${h.email || '—'}</td>
           <td>${h.mobile || h.phone || '—'}</td>
@@ -55,7 +55,7 @@ const HOD = {
   async openAddModal() {
     HOD._editingId = null;
     document.getElementById('hod-form').reset();
-    document.getElementById('hod-modal-title').textContent = 'Appoint HOD / Co-HOD';
+    document.getElementById('hod-modal-title').textContent = 'Appoint Dept Admin / Co-Dept Admin';
     document.getElementById('hod-submit-btn').textContent = '➕ Appoint';
     document.getElementById('h-role').disabled = false;
     await HOD._loadDeptOptions();
@@ -64,7 +64,7 @@ const HOD = {
 
   async openEditModal(h) {
     HOD._editingId = h._id || h.id;
-    document.getElementById('hod-modal-title').textContent = `Edit ${h.role === 'co_hod' ? 'Co-HOD' : 'HOD'}`;
+    document.getElementById('hod-modal-title').textContent = `Edit ${h.role === 'co_hod' ? 'Co-Dept Admin' : 'Dept Admin'}`;
     document.getElementById('hod-submit-btn').textContent = '💾 Save Changes';
     document.getElementById('h-name').value = h.name || '';
     document.getElementById('h-email').value = h.email || '';
@@ -91,7 +91,7 @@ const HOD = {
     if (!dept || !name || !email) { UI.toast('Department, name and email are required', 'error'); return; }
     try {
       await apiJson('/api/admin/hod', { method: 'POST', body: JSON.stringify({ departmentId: dept, role, name, email, mobile, qualification: qual }) });
-      UI.toast(`${role === 'co_hod' ? 'Co-HOD' : 'HOD'} appointed`);
+      UI.toast(`${role === 'co_hod' ? 'Co-Dept Admin' : 'Dept Admin'} appointed`);
       HOD._closeModal();
       await HOD._fetch();
     } catch (e) { UI.toast(e.message || 'Failed', 'error'); }
@@ -119,7 +119,7 @@ const HOD = {
   },
 
   async del(id, name) {
-    UI.confirmDelete({ itemLabel: 'HOD/Co-HOD', name, onConfirm: async () => {
+    UI.confirmDelete({ itemLabel: 'Dept Admin/Co-Dept Admin', name, onConfirm: async () => {
       try {
         await apiJson('/api/admin/hod/' + id, { method: 'DELETE' });
         UI.toast('Permanently deleted');

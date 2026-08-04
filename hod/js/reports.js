@@ -682,7 +682,7 @@ function exportDepartmentExcel(){
     // Sheet 3: Summary
     let sum=[
       ['Department Report — '+currentHOD.department],
-      ['Generated',new Date().toLocaleString()],['HOD',currentHOD.name],[''],
+      ['Generated',new Date().toLocaleString()],['Dept Admin',currentHOD.name],[''],
       ['Course','Total Students','Total Teachers','Avg Attendance %','Regular','Shortage']
     ];
     HOD_COURSES.forEach(c=>{

@@ -320,7 +320,7 @@ router.post(
         role,
         college: req.user.college,
         department: dept.id,
-        designation: role === "co_hod" ? "Co-HOD" : "HOD",
+        designation: role === "co_hod" ? "Co-Dept Admin" : "Dept Admin",
       },
       req.user.id,
     );
@@ -335,12 +335,12 @@ router.post(
       actor: req.user.id,
       actorName: req.user.name,
       actorRole: req.user.role,
-      message: `${user.name} was appointed as ${role === "co_hod" ? "Co-HOD" : "HOD"} by ${req.user.name}.`,
+      message: `${user.name} was appointed as ${role === "co_hod" ? "Co-Dept Admin" : "Dept Admin"} by ${req.user.name}.`,
     });
     ok(
       res,
       { user: mapTeacher(user) },
-      `${role === "co_hod" ? "Co-HOD" : "HOD"} appointed.`,
+      `${role === "co_hod" ? "Co-Dept Admin" : "Dept Admin"} appointed.`,
     );
   }),
 );
@@ -394,7 +394,7 @@ router.delete(
       actor: req.user.id,
       actorName: req.user.name,
       actorRole: req.user.role,
-      message: `${user.name} was removed as ${wasCoHod ? "Co-HOD" : "HOD"} by ${req.user.name}.`,
+      message: `${user.name} was removed as ${wasCoHod ? "Co-Dept Admin" : "Dept Admin"} by ${req.user.name}.`,
     });
     await hardDeleteCascade(user, req.user);
     ok(res, {}, "HOD permanently deleted.");
@@ -403,7 +403,7 @@ router.delete(
 
 // ── Subjects ──────────────────────────────────────────────────────────────
 // Read-only for Admin — subjects are now added/edited/removed by each
-// department's HOD/Co-HOD (see routes/hod.routes.js). Admin sees everything
+// department's Dept Admin/Co-Dept Admin (see routes/hod.routes.js). Admin sees everything
 // here, filterable by department, course, and/or semester, or all at once.
 router.get(
   "/subjects",
@@ -435,7 +435,7 @@ router.post(
     fail(
       res,
       403,
-      "Subjects are managed by each department's HOD/Co-HOD now, not Admin.",
+      "Subjects are managed by each department's Dept Admin/Co-Dept Admin now, not Admin.",
     );
   }),
 );
@@ -445,7 +445,7 @@ router.put(
     fail(
       res,
       403,
-      "Subjects are managed by each department's HOD/Co-HOD now, not Admin.",
+      "Subjects are managed by each department's Dept Admin/Co-Dept Admin now, not Admin.",
     );
   }),
 );
@@ -455,7 +455,7 @@ router.delete(
     fail(
       res,
       403,
-      "Subjects are managed by each department's HOD/Co-HOD now, not Admin.",
+      "Subjects are managed by each department's Dept Admin/Co-Dept Admin now, not Admin.",
     );
   }),
 );

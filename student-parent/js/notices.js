@@ -12,7 +12,7 @@
 
 const SOURCE_META = {
   syllabus:     { label: 'Syllabus',      icon: '📘', badge: 'Teacher' },
-  announcement: { label: 'Announcement',  icon: '📣', badge: 'HOD' },
+  announcement: { label: 'Announcement',  icon: '📣', badge: 'Dept Admin' },
   notice:       { label: 'Notice',        icon: '📢', badge: 'Admin' },
 };
 

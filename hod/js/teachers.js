@@ -4,96 +4,36 @@
 function loadTeachersSection() {
   activeTchrCourse = null;
   tchrDeleteMode = false;
-  tchrViewMode = "cards";
   tchrFilterCourse = "";
   tchrFilterSem = "";
   tchrSearchQuery = "";
   renderTchrCourseCards();
-  renderAllTeacherCards();
+  // "All Teachers" view removed — default to the first course instead of a
+  // combined cross-course list.
+  if (HOD_COURSES.length) {
+    selectTchrCourse(HOD_COURSES[0]);
+  } else {
+    document.getElementById("tchrContent").innerHTML =
+      `<div class="empty-state"><div class="e-icon">🎓</div><div class="e-txt">No courses found</div></div>`;
+  }
 }
 function renderTchrCourseCards() {
   let html = HOD_COURSES.map((c) => {
     let cnt = allTeachers.filter((t) => t.course === c).length;
     return `<div class="cpick ${activeTchrCourse === c ? "active" : ""}" onclick="selectTchrCourse('${c}')"><h4>${c}</h4><p>${cnt} Teachers</p></div>`;
   }).join("");
-  html += `<div class="cpick ${tchrViewMode === "cards" ? "active" : ""}" style="border-color:var(--accent2);" onclick="showAllTeachers()"><h4 style="color:var(--accent2);">👤</h4><p>All Teachers</p></div>`;
   document.getElementById("tchrCourseCards").innerHTML = html;
 }
 function selectTchrCourse(c) {
   activeTchrCourse = c;
   tchrDeleteMode = false;
-  tchrViewMode = "list";
   tchrSearchQuery = "";
   renderTchrCourseCards();
   renderTeacherList();
 }
-function showAllTeachers() {
-  tchrViewMode = "cards";
-  activeTchrCourse = null;
-  renderTchrCourseCards();
-  tchrFilterCourse = "";
-  tchrFilterSem = "";
-  renderAllTeacherCards();
-}
 /* Teacher filter state */
 let tchrSearchQuery = "";
 
-function renderAllTeacherCards() {
-  let courseSel = `<select onchange="tchrFilterCourse=this.value;renderAllTeacherCards()"><option value="">All Courses</option>${HOD_COURSES.map((c) => `<option ${tchrFilterCourse === c ? "selected" : ""}>${c}</option>`).join("")}</select>`;
-  /* Apply all filters: course + name/subject search */
-  let q = tchrSearchQuery.trim().toLowerCase();
-  let filtered = allTeachers.filter((t) => {
-    let courseOk = !tchrFilterCourse || t.course === tchrFilterCourse;
-    let searchOk =
-      !q ||
-      t.name.toLowerCase().includes(q) ||
-      t.subject.toLowerCase().includes(q) ||
-      t.designation.toLowerCase().includes(q);
-    return courseOk && searchOk;
-  });
-  let html = `
-  <div class="tchr-filter-bar" style="flex-wrap:wrap;gap:8px;">
-    <span style="font-weight:700;font-size:13px;color:var(--text2);">Filter:</span>
-    ${courseSel}
-    <button class="btn btn-ghost btn-sm" onclick="tchrFilterCourse='';tchrSearchQuery='';renderAllTeacherCards()">Reset</button>
-    <span style="margin-left:auto;font-size:13px;font-weight:700;color:var(--accent);">${filtered.length} teachers</span>
-  </div>
-  <!-- Teacher search bar -->
-  <div class="search-bar">
-    <span>🔍</span>
-    <input type="text" id="tchrSearchInput" placeholder="Search by name or subject¦"
-      value="${tchrSearchQuery}"
-      oninput="tchrSearchQuery=this.value;renderAllTeacherCards()">
-    ${tchrSearchQuery ? `<span onclick="tchrSearchQuery='';renderAllTeacherCards()" style="cursor:pointer;color:var(--danger);font-size:14px;" title="Clear">✕</span>` : ""}
-  </div>
-  <div style="font-size:12.5px;color:var(--text2);margin-bottom:12px;font-weight:600;">
-    Showing <b style="color:var(--accent)">${filtered.length}</b> of ${allTeachers.length} teachers
-  </div>
-  <div class="teacher-card-grid">`;
-  if (!filtered.length) {
-    html += `</div><div class="empty-state"><div class="e-icon">🔍</div><p>${q ? 'No teachers match "' + q + '"' : "No teachers found."}</p></div>`;
-  } else {
-    filtered.forEach((t) => {
-      html += `<div class="teacher-card" onclick="openTeacherModal('${t.id}')">
-        <img src="${t.avatar || "https://ui-avatars.com/api/?name=" + encodeURIComponent(t.name) + "&size=150&background=random"}" alt="">
-        <div class="tc-name">${t.name}</div>
-        <div class="tc-sub">${t.subject}</div>
-        <span class="tc-course">${t.course}</span>
-        <div style="margin-top:5px;font-size:11px;color:var(--text3);">${t.designation}</div>
-      </div>`;
-    });
-    html += `</div>`;
-  }
-  document.getElementById("tchrContent").innerHTML = html;
-  /* Keep search input focused */
-  if (q) {
-    const si = document.getElementById("tchrSearchInput");
-    if (si) {
-      si.focus();
-      si.selectionStart = si.selectionEnd = si.value.length;
-    }
-  }
-}
 function renderTeacherList() {
   let base = allTeachers.filter((t) => t.course === activeTchrCourse);
   // NOTE: this must NOT be named the same as the <input id="tchrListSearch">

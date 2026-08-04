@@ -15,11 +15,11 @@ import CoHodActivity from '../models/CoHodActivity.js';
 
 export const live = { isDeleted: false };
 
-// Spec item 4: Co-HOD / department activity history. Records who did what
-// against a specific department — called both from HOD-role routes (their
-// own actions) and from Admin routes (e.g. appointing/removing a Co-HOD),
-// so the HOD's history page shows the complete picture, including how the
-// Co-HOD came to be there in the first place. Never throws — a logging
+// Spec item 4: Co-Dept Admin / department activity history. Records who did what
+// against a specific department — called both from Dept Admin routes (their
+// own actions) and from Admin routes (e.g. appointing/removing a Co-Dept Admin),
+// so the Dept Admin's history page shows the complete picture, including how the
+// Co-Dept Admin came to be there in the first place. Never throws — a logging
 // failure should never block the action itself.
 export async function logDeptActivity({ college, department, actor, actorName, actorRole, message }) {
   try {
@@ -92,17 +92,20 @@ export function validateMobileNumber(value, fieldLabel = 'Emergency contact numb
   return raw;
 }
 
-// Spec: a department may have at most one HOD and one Co-HOD at a time —
-// used by both Admin's and Super Admin's "appoint HOD" endpoints so the rule
-// is enforced identically regardless of who's appointing.
+// Spec: a department may have at most one Dept Admin (formerly "HOD") and
+// one Co-Dept Admin (formerly "Co-HOD") at a time — used by both Admin's
+// and Super Admin's "appoint" endpoints so the rule is enforced identically
+// regardless of who's appointing. Internal role values stay 'hod'/'co_hod'
+// (touching those would ripple through auth/permissions); only the
+// display label changed.
 export async function appointHod({ dept, role, user }) {
-  if (!['hod', 'co_hod'].includes(role)) throw badRequest('Role must be either HOD or Co-HOD.');
+  if (!['hod', 'co_hod'].includes(role)) throw badRequest('Role must be either Dept Admin or Co-Dept Admin.');
   const slotField = role === 'hod' ? 'hod' : 'coHod';
   const existingId = dept[slotField];
   if (existingId && String(existingId) !== String(user._id || user.id)) {
     const existing = await User.findOne({ _id: existingId, isDeleted: false }).select('name').lean();
     if (existing) {
-      throw badRequest(`This department already has a ${role === 'hod' ? 'HOD' : 'Co-HOD'} (${existing.name}). Remove them first before appointing someone new.`);
+      throw badRequest(`This department already has a ${role === 'hod' ? 'Dept Admin' : 'Co-Dept Admin'} (${existing.name}). Remove them first before appointing someone new.`);
     }
   }
   dept[slotField] = user._id || user.id;
@@ -178,7 +181,12 @@ export function mapTeacher(t) {
   if (!t) return null;
   const o = t.toJSON ? t.toJSON() : { ...t };
   o.status = o.isDeleted ? 'Deleted' : (o.active !== false ? 'Active' : 'Inactive');
-  o.designation = o.designation || (['hod', 'co_hod'].includes(o.role) ? 'HOD' : o.role === 'admin' ? 'Principal' : 'Teacher');
+  // Always derive from role rather than trusting a possibly-stale stored
+  // `designation` string — accounts appointed before the HOD→Dept Admin
+  // rename still have "HOD"/"Co-HOD" saved in the DB.
+  o.designation = ['hod', 'co_hod'].includes(o.role)
+    ? (o.role === 'co_hod' ? 'Co-Dept Admin' : 'Dept Admin')
+    : o.role === 'admin' ? 'Principal' : (o.designation || 'Teacher');
   return o;
 }
 

@@ -48,7 +48,7 @@
     </button>
     <div class="nav-sec">People</div>
     <button class="nav-btn" data-s="hod" onclick="navTo('hod')">
-      <span class="ni">🧑‍💼</span> HOD / Co-HOD
+      <span class="ni">🧑‍💼</span> Dept Admin / Co-Dept Admin
     </button>
     <button class="nav-btn" data-s="teachers" onclick="navTo('teachers')">
       <span class="ni">👩‍🏫</span> Teachers
@@ -200,7 +200,7 @@
             <div style="font-size:15px;font-weight:600;color:var(--text)" id="subj-list-course-name"></div>
             <div style="font-size:12px;color:var(--text3)" id="subj-list-dept-name"></div>
           </div>
-          <span style="margin-left:auto;font-size:12px;color:var(--text3)">👁 Read-only — managed by each department's HOD/Co-HOD</span>
+          <span style="margin-left:auto;font-size:12px;color:var(--text3)">👁 Read-only — managed by each department's Dept Admin/Co-Dept Admin</span>
         </div>
         <!-- Sem filter tabs -->
         <div class="sem-tabs">
@@ -227,13 +227,13 @@
       </div>
     </div>
 
-    <!-- ══════════ HOD / CO-HOD ══════════ -->
+    <!-- ══════════ DEPT ADMIN / CO-DEPT ADMIN ══════════ -->
     <div class="pg hidden" id="pg-hod">
       <div class="pg-header">
-        <div class="ph-left"><h2>HOD / Co-HOD <span id="hod-count" class="cntag"></span></h2>
-          <p>Each department can have up to one HOD and one Co-HOD. You can add, edit, and remove them here. Super Admin can view them too, but for viewing only.</p>
+        <div class="ph-left"><h2>Dept Admin / Co-Dept Admin <span id="hod-count" class="cntag"></span></h2>
+          <p>Each department can have up to one Dept Admin and one Co-Dept Admin. You can add, edit, and remove them here. Super Admin can view them too, but for viewing only.</p>
         </div>
-        <button class="btn btn-p" onclick="HOD.openAddModal()">＋ Appoint HOD / Co-HOD</button>
+        <button class="btn btn-p" onclick="HOD.openAddModal()">＋ Appoint Dept Admin / Co-Dept Admin</button>
       </div>
       <div class="card">
         <div class="card-body" style="padding:0">
@@ -299,7 +299,7 @@
       <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
         <button class="sem-tab active notice-filter-btn" data-f="all" onclick="Notices.setFilter('all')">All Notices</button>
         <button class="sem-tab notice-filter-btn" data-f="admin" onclick="Notices.setFilter('admin')">Sent by Me</button>
-        <button class="sem-tab notice-filter-btn" data-f="hod" onclick="Notices.setFilter('hod')">Sent by HODs</button>
+        <button class="sem-tab notice-filter-btn" data-f="hod" onclick="Notices.setFilter('hod')">Sent by Dept Admins</button>
       </div>
       <div id="notice-list"></div>
     </div>
@@ -461,7 +461,7 @@
 <div class="modal" id="modal-hod">
   <div class="mbox">
     <div class="mh">
-      <div class="mt" id="hod-modal-title">Appoint HOD / Co-HOD</div>
+      <div class="mt" id="hod-modal-title">Appoint Dept Admin / Co-Dept Admin</div>
       <button class="mc" onclick="HOD._closeModal()">✕</button>
     </div>
     <form id="hod-form" onsubmit="return false">
@@ -471,7 +471,7 @@
             <select class="fi" id="h-dept"><option value="">— Select Department —</option></select>
           </div>
           <div class="fg"><label>Role *</label>
-            <select class="fi" id="h-role"><option value="hod">HOD</option><option value="co_hod">Co-HOD</option></select>
+            <select class="fi" id="h-role"><option value="hod">Dept Admin</option><option value="co_hod">Co-Dept Admin</option></select>
           </div>
         </div>
         <div class="fg"><label>Name *</label><input class="fi" id="h-name" placeholder="Dr. Ankit Shah"/></div>
@@ -480,7 +480,7 @@
           <div class="fg"><label>Mobile</label><input class="fi" id="h-mobile" placeholder="+91 98765 43210"/></div>
           <div class="fg"><label>Qualification</label><input class="fi" id="h-qual" placeholder="Ph.D, M.Tech…"/></div>
         </div>
-        <p style="font-size:12px;color:var(--text3);margin-top:4px">Each department can have at most one HOD and one Co-HOD at a time.</p>
+        <p style="font-size:12px;color:var(--text3);margin-top:4px">Each department can have at most one Dept Admin and one Co-Dept Admin at a time.</p>
       </div>
       <div class="mf">
         <button class="btn btn-g" onclick="HOD._closeModal()">Cancel</button>
@@ -586,7 +586,7 @@
           <div class="fg"><label>Send To</label>
             <select class="fi" id="notice-role">
               <option value="all">Everyone</option>
-              <option value="hod">HODs Only</option>
+              <option value="hod">Dept Admins Only</option>
               <option value="teacher">Teachers Only</option>
               <option value="student">Students Only</option>
             </select>

@@ -49,7 +49,7 @@ function togglePw(inputId) {
 const ROLE_LABELS = {
   super_admin: 'Super Admin', superadmin: 'Super Admin',
   admin: 'Principal', principal: 'Principal',
-  hod: 'HOD', co_hod: 'Co-HOD',
+  hod: 'Dept Admin', co_hod: 'Co-Dept Admin',
   teacher: 'Teacher', student: 'Student', parent: 'Parent',
 };
 

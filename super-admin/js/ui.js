@@ -108,7 +108,7 @@ const UI = {
   pct(part, total) { if (!total) return 0; return Math.round((part/total)*100); },
   roleBadge(role) {
     const map = { super_admin:{label:'Super Admin',cls:'badge--amber'}, admin:{label:'Principal',cls:'badge--purple'},
-      hod:{label:'HOD',cls:'badge--blue'}, co_hod:{label:'Co-HOD',cls:'badge--info'},
+      hod:{label:'Dept Admin',cls:'badge--blue'}, co_hod:{label:'Co-Dept Admin',cls:'badge--info'},
       teacher:{label:'Teacher',cls:'badge--green'}, student:{label:'Student',cls:'badge--success'} };
     const r = map[role] || { label: role, cls: 'badge--info' };
     return `<span class="badge ${r.cls}">${r.label}</span>`;

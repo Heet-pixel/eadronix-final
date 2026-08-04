@@ -15,7 +15,7 @@ let rptDateFrom = "", rptDateTo = "", rptDuration = "";
 let annCourse = null, annSem = null, annTarget = "students";
 let currentStuId = null, currentTchrId = null;
 let stuEditMode = false, tchrEditMode = false;
-let tchrViewMode = 'list', tchrFilterCourse = '', tchrFilterSem = '';
+let tchrFilterCourse = '', tchrFilterSem = '';
 
 /* ═══ SUBJECT HELPER ═══ */
 function getSubjNames(course, sem) {
@@ -147,7 +147,7 @@ async function refreshTeachers() {
     subject: t.subject || '',
     phone: t.phone || t.mobile || '',
     mobile: t.mobile || t.phone || '',
-    designation: t.designation || (['hod','co_hod'].includes(t.role) ? 'HOD' : 'Teacher')
+    designation: t.designation || (['hod','co_hod'].includes(t.role) ? (t.role === 'co_hod' ? 'Co-Dept Admin' : 'Dept Admin') : 'Teacher')
   }));
   await buildTchrReports();
 }

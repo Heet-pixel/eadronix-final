@@ -10,6 +10,7 @@ async function bootstrap() {
     currentUsername = hod.username || hod._id || hod.id;
     currentHOD = {
       name: hod.name || '',
+      role: hod.role || 'hod',
       department: typeof hod.department === 'object' ? (hod.department?.name || '') : (hod.department || ''),
       email: hod.email || '',
       phone: hod.phone || '',
@@ -62,7 +63,9 @@ async function bootstrap() {
 
     // Update UI
     document.getElementById('sidebarDept').textContent = currentHOD.department || 'Department';
-    document.getElementById('sidebarName').textContent = currentHOD.name || 'HOD';
+    document.getElementById('sidebarName').textContent = currentHOD.name || 'Dept Admin';
+    const badgeEl = document.getElementById('sidebarBadge');
+    if (badgeEl) badgeEl.textContent = currentHOD.role === 'co_hod' ? 'Co-Dept Admin' : 'Dept Admin';
     const sbAv = document.getElementById('sidebarAvatar');
     if (sbAv) {
       sbAv.innerHTML = currentHOD.avatar
@@ -168,7 +171,7 @@ function updateProfile() {
       : ini;
   }
   if (el('profileName')) el('profileName').textContent = currentHOD.name;
-  if (el('profileDeptLabel')) el('profileDeptLabel').textContent = 'Head of Department – ' + currentHOD.department;
+  if (el('profileDeptLabel')) el('profileDeptLabel').textContent = (currentHOD.role === 'co_hod' ? 'Co-Dept Admin' : 'Dept Admin') + ' – ' + currentHOD.department;
   if (el('profileInfo')) el('profileInfo').innerHTML = `
     <div class="profile-row"><span>Email</span><span>${currentHOD.email}</span></div>
     <div class="profile-row"><span>Phone</span><span>${currentHOD.phone}</span></div>

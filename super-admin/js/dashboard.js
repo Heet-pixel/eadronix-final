@@ -22,7 +22,7 @@ const Dashboard = {
       { label:'Total Colleges',  value:UI.formatNum(colleges.total),    sub:`${colleges.active} active · ${colleges.inactive} inactive`, icon:ICONS.college,    color:'blue'   },
       { label:'Departments',     value:UI.formatNum(departments),        sub:'Across all colleges',                                        icon:ICONS.department, color:'green'  },
       { label:'Principals',      value:UI.formatNum(staff.principals),   sub:`${staff.faculty ?? (staff.hods + staff.teachers)} faculty`,    icon:ICONS.principal,  color:'amber'  },
-      { label:'HODs',            value:UI.formatNum(staff.hods),         sub:'Total HODs & Co-HODs',                                       icon:ICONS.hod,        color:'purple' },
+      { label:'Dept Admins',     value:UI.formatNum(staff.hods),         sub:'Total Dept Admins & Co-Dept Admins',                          icon:ICONS.hod,        color:'purple' },
       { label:'Total Students',  value:UI.formatNum(students.total),     sub:'Enrolled students',                                          icon:ICONS.student,    color:'accent' },
       { label:'Total Staff',     value:UI.formatNum(staff.total),        sub:'Principals + Faculty',                                       icon:ICONS.analytics,  color:'red'    },
     ];

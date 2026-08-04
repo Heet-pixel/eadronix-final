@@ -30,7 +30,7 @@ async function loadCoHodHistory() {
                 <div style="font-size:13.5px">${_html(e.message)}</div>
                 <div style="font-size:11.5px;color:var(--text3);margin-top:3px">
                   <span style="font-weight:600">${_html(e.actorName || 'Someone')}</span>
-                  <span style="text-transform:uppercase;letter-spacing:.4px;margin-left:6px;padding:1px 6px;border-radius:4px;background:${e.actorRole === 'co_hod' ? '#fef3c7' : '#eef2ff'};color:${e.actorRole === 'co_hod' ? '#92400e' : '#3730a3'};font-size:10px">${e.actorRole === 'co_hod' ? 'Co-HOD' : e.actorRole?.toUpperCase() || 'HOD'}</span>
+                  <span style="text-transform:uppercase;letter-spacing:.4px;margin-left:6px;padding:1px 6px;border-radius:4px;background:${e.actorRole === 'co_hod' ? '#fef3c7' : '#eef2ff'};color:${e.actorRole === 'co_hod' ? '#92400e' : '#3730a3'};font-size:10px">${e.actorRole === 'co_hod' ? 'Co-Dept Admin' : e.actorRole === 'hod' ? 'Dept Admin' : e.actorRole?.toUpperCase() || 'Dept Admin'}</span>
                   · ${fmtDateTime(e.createdAt)}
                 </div>
               </div>

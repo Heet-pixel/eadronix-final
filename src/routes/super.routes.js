@@ -464,17 +464,17 @@ router.post(
   }),
 );
 
-// Spec (updated): Super Admin can only VIEW HOD/Co-HOD — Admin has sole
+// Spec (updated): Super Admin can only VIEW Dept Admin/Co-Dept Admin — Admin has sole
 // control to add/edit/delete them (see admin.routes.js). Super Admin can
 // still add plain teachers below — this restriction is specific to the
-// HOD/Co-HOD role.
+// Dept Admin/Co-Dept Admin role.
 router.post(
   "/departments/:deptId/hods",
   asyncHandler(async (req, res) => {
     fail(
       res,
       403,
-      "Only Admin can appoint a HOD/Co-HOD. Super Admin can view them here.",
+      "Only Admin can appoint a Dept Admin/Co-Dept Admin. Super Admin can view them here.",
     );
   }),
 );
@@ -526,7 +526,7 @@ router.get(
   }),
 );
 
-// Spec (updated): Super Admin can view but not edit/delete a HOD/Co-HOD —
+// Spec (updated): Super Admin can view but not edit/delete a Dept Admin/Co-Dept Admin —
 // Admin has sole control over those (see admin.routes.js PUT/DELETE
 // /hod/:id). Editing/deleting other staff (e.g. plain teachers) is unaffected.
 router.put(
@@ -538,7 +538,7 @@ router.put(
       return fail(
         res,
         403,
-        "Only Admin can edit a HOD/Co-HOD. Super Admin can view them here.",
+        "Only Admin can edit a Dept Admin/Co-Dept Admin. Super Admin can view them here.",
       );
     }
     const user = await User.findByIdAndUpdate(
@@ -560,7 +560,7 @@ router.delete(
       return fail(
         res,
         403,
-        "Only Admin can remove a HOD/Co-HOD. Super Admin can view them here.",
+        "Only Admin can remove a Dept Admin/Co-Dept Admin. Super Admin can view them here.",
       );
     }
     await hardDeleteCascade(user, req.user);

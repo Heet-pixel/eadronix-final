@@ -23,7 +23,7 @@ const DeptDetail = {
       <span class="quick-stat">${ICONS.student} ${stats.total} Students</span>
       <span class="quick-stat">${ICONS.hod} ${facultyCount} Faculty</span>
       <span class="quick-stat" style="color:${hods.length?'var(--green)':'var(--red)'}">
-        ${hods.length?`&#10003; ${hods.length} HOD${hods.length>1?'s':''}` : '&#9888; No HOD'}</span>`;
+        ${hods.length?`&#10003; ${hods.length} Dept Admin${hods.length>1?'s':''}` : '&#9888; No Dept Admin'}</span>`;
     document.getElementById('dept-detail-body').innerHTML =
       DeptDetail._statsHtml(stats) +
       DeptDetail._hodSection(hods, dept, college) +
@@ -49,9 +49,9 @@ const DeptDetail = {
   _hodSection(hods, dept, college) {
     return `<div class="detail-section-block">
       <div class="dsb-header">
-        <h3 class="dsb-title">HODs <span class="count-badge">${hods.length}</span></h3>
+        <h3 class="dsb-title">Dept Admins <span class="count-badge">${hods.length}</span></h3>
       </div>
-      <p style="font-size:12px;color:var(--text3);margin:-4px 0 8px">View only — HOD/Co-HOD are added, edited, and removed by Admin.</p>
+      <p style="font-size:12px;color:var(--text3);margin:-4px 0 8px">View only — Dept Admin/Co-Dept Admin are added, edited, and removed by Admin.</p>
       ${hods.length?hods.map(h=>`
         <div class="staff-card staff-card--hod">
           <div class="staff-avatar staff-avatar--hod">${UI.avatarInnerHtml(h, UI.getInitials(h.name))}</div>
@@ -62,7 +62,7 @@ const DeptDetail = {
               ${h.isFirstLogin?'<span class="badge badge--warning" style="margin-left:4px">Pending Setup</span>':''}
             </div>
           </div>
-        </div>`).join(''):`<div class="empty-chip">No HODs assigned yet.</div>`}
+        </div>`).join(''):`<div class="empty-chip">No Dept Admins assigned yet.</div>`}
     </div>`;
   },
   _teachersSection(teachers, dept, college) {
