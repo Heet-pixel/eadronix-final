@@ -200,6 +200,19 @@ function lastThreeOfRoll(roll) {
   return r.length <= 3 ? r.padStart(3, "0") : r.slice(-3);
 }
 
+// Names in this system are stored "Surname GivenName FatherName" (e.g.
+// "Shah Heet Sahishkumar"), so the first word is the SURNAME, not what the
+// student actually goes by. While marking attendance we want the given
+// name — the second word — falling back to the first word for a
+// single-word name.
+function givenNameOf(fullName) {
+  const parts = String(fullName || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  return parts[1] || parts[0] || "";
+}
+
 // Fetch (and cache, per course+semester) the class roster used both to
 // populate the roll-number <select> dropdowns and to build the seat grid —
 // one source of truth so the dropdown options and the grid can never
@@ -419,7 +432,7 @@ function renderGrid() {
   document.getElementById("acPct").textContent = pct + "%";
   document.getElementById("attGrid").innerHTML = gridSeats
     .map((seat, i) => {
-      const fn = seat.student.name.split(" ")[0];
+      const fn = givenNameOf(seat.student.name);
       return `<div class="seat${seat.status === "absent" ? " absent" : ""}" title="${seat.student.name} (${seat.student.roll})" onclick="seatToggle(${i})">
       <span>${lastThreeOfRoll(seat.student.roll)}</span><span class="seat-name">${fn}</span>
     </div>`;
