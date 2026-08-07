@@ -27,6 +27,18 @@ let maAttEndManuallySet = false; // true once the HOD edits End Time directly �
 let maAttRecords = {}; // { studentId: 'P' | 'A' }
 let maStep = 1;
 
+// ═══════════════════════════════════════════════════════════
+// Practical/Lab roll-number batching (mirrors teacher/js/attendance.js) —
+// lets the HOD scope a Practical attendance session to only one roll-number
+// range (e.g. 1-21) instead of the whole class, so multiple lab batches of
+// the same course/semester can be marked separately without overlap.
+// "All Students" (default, and the only option for Theory) keeps the
+// original whole-class behaviour unchanged.
+// ═══════════════════════════════════════════════════════════
+let maAttAllStudents = true;
+let maAttRollStart = "";
+let maAttRollEnd = "";
+
 /**
  * _todayIsoDateString()
  * -----------------------
@@ -62,6 +74,148 @@ function lastThreeOfRoll(roll) {
   return r.length <= 3 ? r.padStart(3, "0") : r.slice(-3);
 }
 
+// Numeric-aware roll comparator, so "2" sorts before "10" (ascending order).
+// (Mirrors teacher/js/attendance.js's compareRoll().)
+function compareRoll(a, b) {
+  const av = String(a || "").trim(),
+    bv = String(b || "").trim();
+  return av.localeCompare(bv, undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+}
+
+// Is `roll` within [start, end] (numeric-aware, order-independent)?
+// (Mirrors teacher/js/attendance.js's rollInRange().)
+function rollInRange(roll, start, end) {
+  if (!start && !end) return true;
+  const value = String(roll || "").trim();
+  const from = String(start || "").trim();
+  const to = String(end || "").trim();
+  if (!value || !from || !to) return false;
+  if (/^\d+$/.test(value) && /^\d+$/.test(from) && /^\d+$/.test(to)) {
+    const n = Number(value),
+      a = Number(from),
+      b = Number(to);
+    return n >= Math.min(a, b) && n <= Math.max(a, b);
+  }
+  const low =
+    from.localeCompare(to, undefined, { numeric: true }) <= 0 ? from : to;
+  const high = low === from ? to : from;
+  return (
+    value.localeCompare(low, undefined, { numeric: true }) >= 0 &&
+    value.localeCompare(high, undefined, { numeric: true }) <= 0
+  );
+}
+
+// All distinct, ascending-sorted roll numbers enrolled in a course+sem —
+// backs both the Start/End roll <select> dropdowns and the roll-range
+// filter itself, so they can never disagree about who's enrolled.
+function getClassRollNumbers(course, sem) {
+  const students = allStudents.filter(
+    (s) => s.course === course && String(s.sem) === String(sem),
+  );
+  const rolls = [
+    ...new Set(
+      students.map((s) => String(s.roll || "").trim()).filter(Boolean),
+    ),
+  ];
+  return rolls.sort((a, b) => compareRoll(a, b));
+}
+
+// <option> markup for the Start/End roll <select> — spec: the HOD must
+// SELECT an existing roll number, never type one freehand.
+function maRollOptionsHtml(selectedVal) {
+  const rolls = getClassRollNumbers(maAttCourse, maAttSem);
+  const placeholder = rolls.length
+    ? '<option value="">-- Select Roll --</option>'
+    : '<option value="">No students found</option>';
+  return (
+    placeholder +
+    rolls
+      .map(
+        (r) =>
+          `<option value="${escHtml(r)}" ${selectedVal === r ? "selected" : ""}>${escHtml(r)}</option>`,
+      )
+      .join("")
+  );
+}
+
+// The class roster for the currently selected course+sem, ascending by
+// roll number, narrowed to the chosen roll range when marking a Practical
+// with "All Students" unchecked. Single source of truth used everywhere
+// the Step 3 grid, stats, mark-all, confirm and save need "who's in scope".
+function getMaClassStudents() {
+  let students = allStudents.filter(
+    (s) => s.course === maAttCourse && String(s.sem) === String(maAttSem),
+  );
+  students = students
+    .slice()
+    .sort((a, b) => compareRoll(a.roll || "", b.roll || ""));
+  if (
+    maAttType === "Practical" &&
+    !maAttAllStudents &&
+    maAttRollStart &&
+    maAttRollEnd
+  ) {
+    students = students.filter((s) =>
+      rollInRange(s.roll || "", maAttRollStart, maAttRollEnd),
+    );
+  }
+  return students;
+}
+
+// Whether Practical + roll-range mode is on but the range hasn't been
+// fully picked yet — used to block the grid/submit with a clear message
+// instead of silently falling back to "whole class".
+function maRollRangeIncomplete() {
+  return (
+    maAttType === "Practical" &&
+    !maAttAllStudents &&
+    (!maAttRollStart || !maAttRollEnd)
+  );
+}
+
+/**
+ * toggleMaAllStudents(checked)
+ * -------------------------------
+ * Fires when the HOD (un)checks "All Students" under a Practical session.
+ * Unchecking reveals the Start/End roll pickers; checking clears any
+ * chosen range and returns to whole-class marking.
+ */
+function toggleMaAllStudents(checked) {
+  maAttAllStudents = checked;
+  if (checked) {
+    maAttRollStart = "";
+    maAttRollEnd = "";
+  }
+  renderMarkAttPage();
+}
+
+function onMaRollStartChange(val) {
+  maAttRollStart = val;
+  normalizeMaRollRange();
+  renderMarkAttPage();
+}
+
+function onMaRollEndChange(val) {
+  maAttRollEnd = val;
+  normalizeMaRollRange();
+  renderMarkAttPage();
+}
+
+// If start > end (picked in the wrong order), swap them so the stored/used
+// range is always ascending.
+function normalizeMaRollRange() {
+  if (
+    /^\d+$/.test(maAttRollStart) &&
+    /^\d+$/.test(maAttRollEnd) &&
+    Number(maAttRollStart) > Number(maAttRollEnd)
+  ) {
+    [maAttRollStart, maAttRollEnd] = [maAttRollEnd, maAttRollStart];
+  }
+}
+
 /**
  * _maCalcEndTime(start, type)
  * -----------------------------
@@ -95,6 +249,13 @@ function onMaTypeChange(newType) {
   const computed = _maCalcEndTime(maAttStart, newType);
   if (computed) maAttEnd = computed;
   maAttEndManuallySet = false;
+  if (newType !== "Practical") {
+    // Roll-range batching only applies to Practicals — same rule as the
+    // Teacher portal's onAttTypeChange().
+    maAttAllStudents = true;
+    maAttRollStart = "";
+    maAttRollEnd = "";
+  }
   renderMarkAttPage();
 }
 
@@ -112,15 +273,26 @@ function onMaStartTimeChange(newStart) {
   maAttStart = newStart;
   if (!maAttEndManuallySet) {
     const computed = _maCalcEndTime(newStart, maAttType);
-    if (computed) maAttEnd = computed;
+    if (computed) {
+      maAttEnd = computed;
+      // Patch the End Time field's value directly instead of calling
+      // renderMarkAttPage() — a full re-render replaces the <input>
+      // element itself, which yanks keyboard focus away from Start Time
+      // mid-edit (a native <input type="time"> fires "change" as soon as
+      // each segment — hour, then minute — is completed, not only on
+      // blur). Nothing else on screen depends on the time fields, so no
+      // re-render is needed at all here.
+      const endInput = document.getElementById("maAttEndTimeInput");
+      if (endInput) endInput.value = maAttEnd;
+    }
   }
-  renderMarkAttPage();
 }
 
 function onMaEndTimeChange(newEnd) {
   maAttEnd = newEnd;
   maAttEndManuallySet = true; // HOD took control — never auto-overwrite again this session
-  renderMarkAttPage();
+  // No re-render here either, for the same reason as onMaStartTimeChange —
+  // keeps focus in the End Time field while the HOD is still typing it.
 }
 
 /**
@@ -207,6 +379,9 @@ function loadMarkAttendance() {
   maAttEnd = "09:30";
   maAttType = "Theory";
   maAttEndManuallySet = false;
+  maAttAllStudents = true;
+  maAttRollStart = "";
+  maAttRollEnd = "";
   maAttRecords = {};
   maStep = 1;
   renderMarkAttPage();
@@ -285,11 +460,11 @@ function renderMarkAttPage() {
         </div>
         <div class="att-ctrl-group">
           <label>Start Time</label>
-          <input type="time" value="${maAttStart}" onchange="onMaStartTimeChange(this.value)">
+          <input id="maAttStartTimeInput" type="time" value="${maAttStart}" onchange="onMaStartTimeChange(this.value)">
         </div>
         <div class="att-ctrl-group">
           <label>End Time</label>
-          <input type="time" value="${maAttEnd}" onchange="onMaEndTimeChange(this.value)">
+          <input id="maAttEndTimeInput" type="time" value="${maAttEnd}" onchange="onMaEndTimeChange(this.value)">
         </div>
         <div class="att-ctrl-group">
           <label>Division (optional)</label>
@@ -300,6 +475,44 @@ function renderMarkAttPage() {
           <input type="text" value="${escHtml(maAttTopic)}" placeholder="e.g. Arrays, cash flow, lab demo" oninput="maAttTopic=this.value">
         </div>
       </div>
+
+      ${
+        maAttType === "Practical"
+          ? `
+      <!-- Practical/Lab roll-number batching: only shown when Type = Practical.
+           Lets the HOD mark attendance for just one roll-number batch (e.g.
+           1-21) so multiple lab batches of the same class can be marked
+           separately without clashing — mirrors the Teacher portal exactly. -->
+      <div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)">
+        <label class="proxy-toggle">
+          <input type="checkbox" ${maAttAllStudents ? "checked" : ""} onchange="toggleMaAllStudents(this.checked)">
+          <span>All Students (whole class)</span>
+        </label>
+        ${
+          !maAttAllStudents
+            ? `
+        <div class="att-controls" style="margin-top:10px;margin-bottom:0">
+          <div class="att-ctrl-group">
+            <label>Start Roll No.</label>
+            <select onchange="onMaRollStartChange(this.value)">
+              ${maRollOptionsHtml(maAttRollStart)}
+            </select>
+          </div>
+          <div class="att-ctrl-group">
+            <label>End Roll No.</label>
+            <select onchange="onMaRollEndChange(this.value)">
+              ${maRollOptionsHtml(maAttRollEnd)}
+            </select>
+          </div>
+        </div>`
+            : ""
+        }
+        <div style="font-size:11px;color:var(--text3,#888);font-weight:600;margin-top:8px">
+          Only students within this roll range will appear below and get marked. Leave "All Students" checked to mark the whole class. Other teachers/HODs can mark a different roll range for a different lab at the same time.
+        </div>
+      </div>`
+          : ""
+      }
     </div>`;
 
   if (!maAttCourse || !maAttSem) {
@@ -348,12 +561,24 @@ function renderMarkAttPage() {
   if (!Object.keys(maAttRecords).length && saved)
     maAttRecords = Object.assign({}, saved);
 
-  let students = allStudents.filter(
-    (s) => s.course === maAttCourse && String(s.sem) === String(maAttSem),
-  );
+  if (maRollRangeIncomplete()) {
+    html += `<div class="empty-state" style="padding:32px 20px">
+      <div class="e-icon">🔢</div>
+      <p>Select both a Start and End roll number above, or check "All Students".</p>
+    </div>`;
+    document.getElementById("markAttContent").innerHTML = html;
+    updateMaStepper();
+    return;
+  }
+
+  let students = getMaClassStudents();
   if (!students.length) {
     html += `<div class="empty-state" style="padding:32px 20px">
-      <div class="e-icon">📄</div><p>No students found for this selection.</p>
+      <div class="e-icon">📄</div><p>${
+        maAttType === "Practical" && !maAttAllStudents
+          ? `No students found with roll number between ${escHtml(maAttRollStart)} and ${escHtml(maAttRollEnd)}.`
+          : "No students found for this selection."
+      }</p>
     </div>`;
     document.getElementById("markAttContent").innerHTML = html;
     updateMaStepper();
@@ -445,9 +670,7 @@ function toggleMaCard(stuId) {
 }
 
 function _refreshMaStats() {
-  let students = allStudents.filter(
-    (s) => s.course === maAttCourse && String(s.sem) === String(maAttSem),
-  );
+  let students = getMaClassStudents();
   let pC = students.filter((s) => maAttRecords[s.id] === "P").length;
   let aC = students.filter((s) => maAttRecords[s.id] === "A").length;
   let pct = students.length ? Math.round((pC / students.length) * 100) : 0;
@@ -462,9 +685,7 @@ function _refreshMaStats() {
 
 /** Mark all students Present or Absent and re-render (full grid refresh) */
 function maMarkAll(status) {
-  let students = allStudents.filter(
-    (s) => s.course === maAttCourse && String(s.sem) === String(maAttSem),
-  );
+  let students = getMaClassStudents();
   students.forEach((s) => {
     maAttRecords[s.id] = status;
   });
@@ -486,9 +707,18 @@ function prepareMaConfirm() {
     showToast(timingCheck1.message, true);
     return;
   }
-  let students = allStudents.filter(
-    (s) => s.course === maAttCourse && String(s.sem) === String(maAttSem),
-  );
+  if (maRollRangeIncomplete()) {
+    showToast(
+      'Select both a Start and End roll number, or check "All Students".',
+      true,
+    );
+    return;
+  }
+  let students = getMaClassStudents();
+  if (!students.length) {
+    showToast("No students to mark for this roll range.", true);
+    return;
+  }
   let pC = students.filter((s) => maAttRecords[s.id] === "P").length;
   let aC = students.filter((s) => maAttRecords[s.id] === "A").length;
   let pct = students.length ? Math.round((pC / students.length) * 100) : 0;
@@ -532,9 +762,30 @@ async function saveMarkAttendance() {
     showToast(timingCheck2.message, true);
     return;
   }
+  if (maRollRangeIncomplete()) {
+    showToast(
+      'Select both a Start and End roll number, or check "All Students".',
+      true,
+    );
+    return;
+  }
 
-  let pC = Object.values(maAttRecords).filter((v) => v === "P").length;
-  let aC = Object.values(maAttRecords).filter((v) => v === "A").length;
+  // Only the students currently in scope (whole class, or the chosen roll
+  // range for a Practical batch) get submitted — mirrors the Teacher
+  // portal, and stops a stale maAttRecords entry from a wider selection
+  // leaking into a narrower batch's submission.
+  const scopedStudents = getMaClassStudents();
+  if (!scopedStudents.length) {
+    showToast("No students to mark for this roll range.", true);
+    return;
+  }
+  const scopedRecords = {};
+  scopedStudents.forEach((s) => {
+    scopedRecords[s.id] = maAttRecords[s.id] || "P";
+  });
+
+  let pC = scopedStudents.filter((s) => scopedRecords[s.id] === "P").length;
+  let aC = scopedStudents.filter((s) => scopedRecords[s.id] === "A").length;
 
   // 2. POST to production backend — this is the source of truth. If it
   // fails (validation error, duplicate lecture, time conflict, etc.) we
@@ -547,12 +798,17 @@ async function saveMarkAttendance() {
         semester: maAttSem,
         subject: maAttSubject,
         date: maAttDate,
-        records: maAttRecords,
+        records: scopedRecords,
         time: maAttStart && maAttEnd ? `${maAttStart} - ${maAttEnd}` : "",
         division: maAttDivision || "",
         type: maAttType,
         topic: maAttTopic,
         isProxy: maAttProxy,
+        allStudents: maAttType === "Practical" ? maAttAllStudents : true,
+        rollRangeStart:
+          maAttType === "Practical" && !maAttAllStudents ? maAttRollStart : "",
+        rollRangeEnd:
+          maAttType === "Practical" && !maAttAllStudents ? maAttRollEnd : "",
       }),
     });
   } catch (e) {
@@ -570,7 +826,11 @@ async function saveMarkAttendance() {
   if (!savedAttendance[maAttCourse][maAttSem][maAttSubject])
     savedAttendance[maAttCourse][maAttSem][maAttSubject] = {};
   savedAttendance[maAttCourse][maAttSem][maAttSubject][maAttDate] =
-    Object.assign({}, maAttRecords);
+    Object.assign(
+      {},
+      (savedAttendance[maAttCourse][maAttSem][maAttSubject] || {})[maAttDate],
+      scopedRecords,
+    );
 
   // 3. Refresh percentage calculations in reports
   invalidateAttReportCache();
@@ -593,9 +853,7 @@ function exportMarkAttExcel() {
     showToast("Select course, semester and subject first.", true);
     return;
   }
-  let students = allStudents.filter(
-    (s) => s.course === maAttCourse && String(s.sem) === String(maAttSem),
-  );
+  let students = getMaClassStudents();
   if (!students.length) {
     showToast("No students found.", true);
     return;
@@ -699,7 +957,7 @@ const HodAttHistory = {
         <div class="ssc-time"><b>${fmtDate(s.date)}</b>${s.time ? "<br>" + s.time : ""}</div>
         <div class="ssc-info">
           <span><b>${escHtml(s.subjectName || "")}</b> — ${escHtml(s.teacherName)}</span>
-          <span>${escHtml(s.course || "")} Sem ${s.semester || ""}${s.division ? " · " + escHtml(s.division) : ""}</span>
+          <span>${escHtml(s.course || "")} Sem ${s.semester || ""}${s.division ? " · " + escHtml(s.division) : ""}${s.allStudents === false && s.rollRangeStart && s.rollRangeEnd ? " · Roll " + escHtml(s.rollRangeStart) + "-" + escHtml(s.rollRangeEnd) : ""}</span>
           <span>✅ ${s.present} &nbsp; ❌ ${s.absent}</span>
         </div>
       </div>`,
@@ -724,7 +982,7 @@ const HodAttHistory = {
         : null;
       body.innerHTML = `
         <p style="color:var(--muted,#888);font-size:13px;margin-bottom:10px">
-          ${d.meta.course} Sem ${d.meta.semester}${d.meta.division ? " · " + escHtml(d.meta.division) : ""} ·
+          ${d.meta.course} Sem ${d.meta.semester}${d.meta.division ? " · " + escHtml(d.meta.division) : ""}${d.meta.allStudents === false && d.meta.rollRangeStart && d.meta.rollRangeEnd ? " · Roll " + escHtml(d.meta.rollRangeStart) + "-" + escHtml(d.meta.rollRangeEnd) : ""} ·
           Taken by <b>${escHtml(d.meta.teacherName)}</b> — editing here updates this lecture only.
         </p>
         <div id="hodAttSessionSeats" style="display:flex;flex-direction:column;gap:6px">

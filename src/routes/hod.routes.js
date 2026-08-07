@@ -37,6 +37,7 @@ import {
   validatePdfDataUri,
   validateAttendanceDateIsNotInTheFuture,
   validateLectureDuration,
+  isRollWithinRange,
 } from "../controllers/common.js";
 import {
   to12h,
@@ -1263,6 +1264,74 @@ router.post(
     const topic = String(req.body.topic || "").trim();
     const isProxy = Boolean(req.body.isProxy);
 
+    // Practical/Lab roll-number batching (mirrors teacher.routes.js POST
+    // /attendance): an HOD marking a Practical can scope the lecture to
+    // just one roll-number range (e.g. 1-21) instead of the whole class,
+    // so several teachers/HODs can mark different lab batches of the same
+    // class at the same time slot. Theory/Tutorial/Seminar (or a Practical
+    // explicitly marked "All Students") always cover the whole class.
+    const isPractical = String(type).trim().toLowerCase() === "practical";
+    let rollRangeStart = String(
+      req.body.rollRangeStart || req.body.rollStart || "",
+    ).trim();
+    let rollRangeEnd = String(
+      req.body.rollRangeEnd || req.body.rollEnd || "",
+    ).trim();
+    let allStudents =
+      req.body.allStudents !== undefined ? Boolean(req.body.allStudents) : true;
+    if (!isPractical) {
+      rollRangeStart = "";
+      rollRangeEnd = "";
+      allStudents = true;
+    } else if (allStudents) {
+      rollRangeStart = "";
+      rollRangeEnd = "";
+    } else {
+      if (!rollRangeStart || !rollRangeEnd) {
+        return fail(
+          res,
+          400,
+          'Select both a Start and End roll number for this practical, or choose "All Students".',
+        );
+      }
+      // Keep the stored range ascending regardless of the order picked in.
+      if (
+        /^\d+$/.test(rollRangeStart) &&
+        /^\d+$/.test(rollRangeEnd) &&
+        Number(rollRangeStart) > Number(rollRangeEnd)
+      ) {
+        [rollRangeStart, rollRangeEnd] = [rollRangeEnd, rollRangeStart];
+      }
+      // Defense in depth: confirm every student in this submission actually
+      // falls inside the chosen roll range, even though the UI already
+      // filters the grid to it.
+      const submittedIds = records
+        .map((r) => r.student || r.studentId)
+        .filter(Boolean);
+      if (submittedIds.length) {
+        const submittedStudents = await Student.find({
+          _id: { $in: submittedIds },
+        })
+          .select("roll rollNo rollNumber")
+          .lean();
+        const outOfRange = submittedStudents.some(
+          (st) =>
+            !isRollWithinRange(
+              st.roll || st.rollNo || st.rollNumber || "",
+              rollRangeStart,
+              rollRangeEnd,
+            ),
+        );
+        if (outOfRange) {
+          return fail(
+            res,
+            400,
+            `One or more selected students fall outside roll ${rollRangeStart}-${rollRangeEnd}.`,
+          );
+        }
+      }
+    }
+
     const dateCheck = validateAttendanceDateIsNotInTheFuture(sessionDate);
     if (!dateCheck.ok) return fail(res, 400, dateCheck.message);
 
@@ -1287,6 +1356,8 @@ router.post(
       subject: subjectDoc._id,
       division,
       time,
+      rollRangeStart,
+      rollRangeEnd,
       date: { $gte: dayStart, $lte: dayEnd },
     })
       .select("_id")
@@ -1309,6 +1380,9 @@ router.post(
       startTime: attendanceStartTime || "",
       endTime: attendanceEndTime || "",
       excludeTeacher: req.user.id,
+      rollRangeStart,
+      rollRangeEnd,
+      allStudents,
     });
     if (timeConflict) return fail(res, 409, timeConflict.message);
 
@@ -1324,6 +1398,9 @@ router.post(
         type,
         time,
         topic,
+        allStudents,
+        rollRangeStart,
+        rollRangeEnd,
         isProxy,
         proxyForSubject: isProxy ? subjectDoc._id : undefined,
         proxyForSubjectName: isProxy ? subjectDoc.name : "",
@@ -1366,7 +1443,7 @@ router.get(
     const docs = await Attendance.find(filter)
       .populate("teacher", "name")
       .select(
-        "date course semester subject subjectName division time type status topic isProxy teacher",
+        "date course semester subject subjectName division time type status topic isProxy teacher allStudents rollRangeStart rollRangeEnd",
       )
       .lean();
 
@@ -1381,6 +1458,8 @@ router.get(
         time: d.time || "",
         day: dayKey(d.date),
         teacher: d.teacher ? String(d.teacher._id || d.teacher) : null,
+        rollRangeStart: d.rollRangeStart || "",
+        rollRangeEnd: d.rollRangeEnd || "",
       };
       const key = encodeSessionKey(parts);
       if (!sessions.has(key)) {
@@ -1396,6 +1475,9 @@ router.get(
           type: d.type || "Lecture",
           topic: d.topic || "",
           isProxy: !!d.isProxy,
+          allStudents: d.allStudents !== false,
+          rollRangeStart: d.rollRangeStart || "",
+          rollRangeEnd: d.rollRangeEnd || "",
           teacherName: d.teacher?.name || "Unknown",
           present: 0,
           absent: 0,
@@ -1438,6 +1520,8 @@ router.get(
           time: d.time || "",
           day: dayKey(d.date),
           teacher: d.teacher ? String(d.teacher._id || d.teacher) : null,
+          rollRangeStart: d.rollRangeStart || "",
+          rollRangeEnd: d.rollRangeEnd || "",
         }) === req.params.sessionKey,
     );
     if (!records.length)
@@ -1455,6 +1539,9 @@ router.get(
         type: records[0].type,
         topic: records[0].topic || "",
         isProxy: !!records[0].isProxy,
+        allStudents: records[0].allStudents !== false,
+        rollRangeStart: records[0].rollRangeStart || "",
+        rollRangeEnd: records[0].rollRangeEnd || "",
         date: records[0].date,
         uploadedAt: records[0].createdAt,
         teacherName: records[0].teacher?.name || "Unknown",
@@ -1493,6 +1580,8 @@ router.put(
           time: d.time || "",
           day: dayKey(d.date),
           teacher: d.teacher ? String(d.teacher) : null,
+          rollRangeStart: d.rollRangeStart || "",
+          rollRangeEnd: d.rollRangeEnd || "",
         }) === req.params.sessionKey,
     );
     if (!sessionDocs.length)
