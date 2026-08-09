@@ -49,7 +49,7 @@ const Profile = {
           <div class="profile-avatar-wrap" style="position:relative;display:inline-block">
             ${
               u.avatar
-                ? `<img src="${u.avatar}" alt="${u.name || "Profile photo"}" class="profile-avatar profile-avatar--img" id="profileAvatarImg">`
+                ? `<img src="${u.avatar}" alt="" class="profile-avatar profile-avatar--img" id="profileAvatarImg" onerror="UI.avatarFallback(this, '${initials}')">`
                 : `<div class="profile-avatar" id="profileAvatarInitials">${initials}</div>`
             }
             ${

@@ -787,35 +787,72 @@ async function saveMarkAttendance() {
   let pC = scopedStudents.filter((s) => scopedRecords[s.id] === "P").length;
   let aC = scopedStudents.filter((s) => scopedRecords[s.id] === "A").length;
 
+  const maPayload = {
+    course: maAttCourse,
+    semester: maAttSem,
+    subject: maAttSubject,
+    date: maAttDate,
+    records: scopedRecords,
+    time: maAttStart && maAttEnd ? `${maAttStart} - ${maAttEnd}` : "",
+    division: maAttDivision || "",
+    type: maAttType,
+    topic: maAttTopic,
+    isProxy: maAttProxy,
+    allStudents: maAttType === "Practical" ? maAttAllStudents : true,
+    rollRangeStart:
+      maAttType === "Practical" && !maAttAllStudents ? maAttRollStart : "",
+    rollRangeEnd:
+      maAttType === "Practical" && !maAttAllStudents ? maAttRollEnd : "",
+  };
+
   // 2. POST to production backend — this is the source of truth. If it
   // fails (validation error, duplicate lecture, time conflict, etc.) we
   // stop here and surface the real error instead of pretending it saved.
+  //
+  // Offline Attendance Support: when offline (or the server can't be
+  // reached), OfflineAttendanceSync saves this exact same payload into
+  // IndexedDB and resolves with { success:true, offline:true } instead of
+  // throwing, so the HOD can keep marking attendance normally. The plain
+  // apiJson() call still runs unchanged whenever there IS a connection.
+  let maSyncResult;
   try {
-    await apiJson("/api/hod/attendance", {
-      method: "POST",
-      body: JSON.stringify({
-        course: maAttCourse,
-        semester: maAttSem,
-        subject: maAttSubject,
-        date: maAttDate,
-        records: scopedRecords,
-        time: maAttStart && maAttEnd ? `${maAttStart} - ${maAttEnd}` : "",
-        division: maAttDivision || "",
-        type: maAttType,
-        topic: maAttTopic,
-        isProxy: maAttProxy,
-        allStudents: maAttType === "Practical" ? maAttAllStudents : true,
-        rollRangeStart:
-          maAttType === "Practical" && !maAttAllStudents ? maAttRollStart : "",
-        rollRangeEnd:
-          maAttType === "Practical" && !maAttAllStudents ? maAttRollEnd : "",
-      }),
-    });
+    if (window.OfflineAttendanceSync) {
+      maSyncResult = await OfflineAttendanceSync.submit({
+        role: "hod",
+        url: "/api/hod/attendance",
+        payload: maPayload,
+      });
+      if (!maSyncResult.success) {
+        showToast(
+          maSyncResult.message ||
+            "Failed to save attendance. Please try again.",
+          true,
+        );
+        return;
+      }
+    } else {
+      await apiJson("/api/hod/attendance", {
+        method: "POST",
+        body: JSON.stringify(maPayload),
+      });
+    }
   } catch (e) {
     showToast(
       e.message || "Failed to save attendance. Please try again.",
       true,
     );
+    return;
+  }
+
+  if (maSyncResult && maSyncResult.offline) {
+    // Not in MongoDB yet — leave the local report cache and reports screen
+    // untouched until sync actually succeeds (spec item 5: Students,
+    // Parents, Reports and Dashboards must not reflect it early).
+    showToast(
+      maSyncResult.message ||
+        "Offline: attendance saved and will sync automatically.",
+    );
+    loadMarkAttendance();
     return;
   }
 

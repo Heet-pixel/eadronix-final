@@ -1,0 +1,13 @@
+{
+  "name": "Eadronix - Teacher Portal",
+  "short_name": "Eadronix Teacher",
+  "start_url": "/teacher/",
+  "scope": "/teacher/",
+  "display": "standalone",
+  "background_color": "#0e1117",
+  "theme_color": "#0e1117",
+  "icons": [
+    { "src": "/teacher/logo.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/teacher/logo.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

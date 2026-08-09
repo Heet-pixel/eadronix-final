@@ -179,8 +179,9 @@ function _applyIdentity() {
     if (!el) return;
 
     el.innerHTML = avatar
-      ? `<img src="${avatar}" alt="${name}"
-                 style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
+      ? `<img src="${avatar}" alt=""
+                 style="width:100%;height:100%;border-radius:50%;object-fit:cover;"
+                 onerror="UI.avatarFallback(this, '${initials}')">`
       : initials;
   });
 }

@@ -1,6 +1,7 @@
-import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
 
-const region = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || 'ap-south-1';
+const region =
+  process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "ap-south-1";
 let sesClient;
 
 function getSesClient() {
@@ -8,23 +9,26 @@ function getSesClient() {
   return sesClient;
 }
 
-export async function sendOtpEmail(to, otp, purpose = 'login') {
+export async function sendOtpEmail(to, otp, purpose = "login") {
   const subjects = {
-    first_login: 'Eadronix Portal - Activate Your Account',
-    reset_password: 'Eadronix Portal - Reset Your Password',
-    login: 'Eadronix Portal - Your OTP Code',
+    first_login: "Eadronix Portal - Activate Your Account",
+    reset_password: "Eadronix Portal - Reset Your Password",
+    login: "Eadronix Portal - Your OTP Code",
   };
 
   const messages = {
-    first_login: 'You are activating your Eadronix Portal account.',
-    reset_password: 'You requested a password reset.',
-    login: 'Use this OTP to log in.',
+    first_login: "You are activating your Eadronix Portal account.",
+    reset_password: "You requested a password reset.",
+    login: "Use this OTP to log in.",
   };
 
   const subject = subjects[purpose] || subjects.login;
   const message = messages[purpose] || messages.login;
   const fromEmail = process.env.EMAIL_FROM || process.env.SES_FROM_EMAIL;
-  const fromName = process.env.EMAIL_FROM_NAME || process.env.SES_FROM_NAME || 'Eadronix Portal';
+  const fromName =
+    process.env.EMAIL_FROM_NAME ||
+    process.env.SES_FROM_NAME ||
+    "Eadronix Portal";
 
   const html = `
 <!DOCTYPE html>
@@ -55,19 +59,22 @@ export async function sendOtpEmail(to, otp, purpose = 'login') {
 </html>`;
 
   try {
-    if (!fromEmail) throw new Error('EMAIL_FROM or SES_FROM_EMAIL is required for AWS SES.');
-    await getSesClient().send(new SendEmailCommand({
-      Source: `${fromName} <${fromEmail}>`,
-      Destination: { ToAddresses: [to] },
-      Message: {
-        Subject: { Data: subject, Charset: 'UTF-8' },
-        Body: { Html: { Data: html, Charset: 'UTF-8' } },
-      },
-    }));
-    console.log('OTP email sent via AWS SES');
+    if (!fromEmail)
+      throw new Error("EMAIL_FROM or SES_FROM_EMAIL is required for AWS SES.");
+    await getSesClient().send(
+      new SendEmailCommand({
+        Source: `${fromName} <${fromEmail}>`,
+        Destination: { ToAddresses: [to] },
+        Message: {
+          Subject: { Data: subject, Charset: "UTF-8" },
+          Body: { Html: { Data: html, Charset: "UTF-8" } },
+        },
+      }),
+    );
+    console.log("OTP email sent via AWS SES");
     return { sent: true };
   } catch (err) {
-    console.error('AWS SES email error', err.message);
+    console.error("AWS SES email error", err.message);
     return { sent: false, error: err.message };
   }
 }

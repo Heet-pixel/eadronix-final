@@ -1,0 +1,13 @@
+{
+  "name": "Eadronix - HOD Portal",
+  "short_name": "Eadronix HOD",
+  "start_url": "/hod/",
+  "scope": "/hod/",
+  "display": "standalone",
+  "background_color": "#0e1117",
+  "theme_color": "#0e1117",
+  "icons": [
+    { "src": "/hod/logo.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/hod/logo.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

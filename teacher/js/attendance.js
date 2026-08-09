@@ -557,11 +557,28 @@ async function submitAtt() {
     records,
   };
 
+  let res;
   try {
-    const res = await TAPI.saveAttendance(payload);
+    // Offline Attendance Support: if the browser is offline, or the server
+    // can't be reached, this saves the exact same payload into IndexedDB
+    // and returns { success:true, offline:true } instead of throwing —
+    // TAPI.saveAttendance() itself is untouched and is still what actually
+    // runs whenever there IS a connection (see shared/js/offline-sync.js).
+    res = window.OfflineAttendanceSync
+      ? await OfflineAttendanceSync.submit({
+          role: "teacher",
+          url: "/api/teacher/attendance",
+          payload,
+        })
+      : await TAPI.saveAttendance(payload);
     if (!res.success) {
       showToast(res.message || "Failed to save attendance", "error");
       return;
+    }
+    if (res.offline) {
+      showToast(
+        res.message || "Offline: attendance saved and will sync automatically.",
+      );
     }
   } catch (_) {
     showToast("Network error. Please try again.", "error");
@@ -571,15 +588,20 @@ async function submitAtt() {
   const p = gridSeats.filter((s) => s.status === "present").length;
   const tot = gridSeats.length;
 
-  // Update local log for dashboard counter
-  attLogs.push({
-    course: c,
-    sem: s,
-    subject: sub,
-    date: dt,
-    present: p,
-    total: tot,
-  });
+  // Update local log for dashboard counter — only once it's actually in
+  // MongoDB. While a record is still offline/queued, the teacher's own
+  // dashboard stays in sync with what's really been saved server-side,
+  // same as Student/Parent/Reports (spec item 5).
+  if (!(window.OfflineAttendanceSync && res && res.offline)) {
+    attLogs.push({
+      course: c,
+      sem: s,
+      subject: sub,
+      date: dt,
+      present: p,
+      total: tot,
+    });
+  }
 
   // Reset UI
   document.getElementById("attConfirm").style.display = "none";
