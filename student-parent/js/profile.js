@@ -112,10 +112,15 @@ const Profile = {
       const dataUri = await this._compressImage(file);
       const d = await API.student.uploadPhoto(dataUri);
       if (!d.success) throw new Error(d.message || "Upload failed");
-      this._render(d.student || d.profile || d.data);
-      if (window.SAL_USER) window.SAL_USER.avatar = dataUri;
+      const updatedStudent = d.student || d.profile || d.data;
+      this._render(updatedStudent);
+      // Use the stored URL returned by the server (S3 or GridFS path), not
+      // the raw base64 dataUri — this way the sidebar and SAL_USER stay in
+      // sync with what the server actually saved, so a refresh still works.
+      const storedAvatar = updatedStudent?.avatar || dataUri;
+      if (window.SAL_USER) window.SAL_USER.avatar = storedAvatar;
       App._renderSidebarAvatar(
-        dataUri,
+        storedAvatar,
         UI.initials(window.SAL_USER?.name || ""),
       );
       UI.toast ? UI.toast("Profile photo updated.") : null;

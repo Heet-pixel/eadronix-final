@@ -236,6 +236,10 @@ export function mapStudent(s) {
   o.mobile = o.mobile || o.phone || "";
   o.active = o.active !== false && o.isActive !== false;
   o.isActive = o.active;
+  // Preserve avatar so profile pages and HOD student lists can display photo.
+  // toJSON() keeps it, but explicit assignment ensures it survives any future
+  // reshaping of this function.
+  o.avatar = o.avatar || null;
   if (typeof o.address === "object" && o.address) {
     o.street = o.street || o.address.street || "";
     o.city = o.city || o.address.city || "";
