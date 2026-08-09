@@ -198,6 +198,26 @@ export async function getS3FileMeta(key) {
 // OPEN S3 FILE DOWNLOAD STREAM
 // ============================================================
 
+// export async function openS3DownloadStream(key) {
+//   const s3 = getClient();
+
+//   if (!s3 || !key) {
+//     return null;
+//   }
+
+//   const result = await s3.send(
+//     new GetObjectCommand({
+//       Bucket: bucket,
+//       Key: key,
+//     }),
+//   );
+
+//   if (result.Body instanceof Readable) {
+//     return result.Body;
+//   }
+
+//   return Readable.fromWeb(result.Body);
+// }
 export async function openS3DownloadStream(key) {
   const s3 = getClient();
 
@@ -205,20 +225,47 @@ export async function openS3DownloadStream(key) {
     return null;
   }
 
-  const result = await s3.send(
-    new GetObjectCommand({
-      Bucket: bucket,
-      Key: key,
-    }),
-  );
+  try {
+    console.log("========== S3 GET DEBUG ==========");
+    console.log("S3 Bucket:", bucket);
+    console.log("S3 Region:", region);
+    console.log("S3 Endpoint:", endpoint || "AWS DEFAULT");
+    console.log("S3 Key:", key);
 
-  if (result.Body instanceof Readable) {
-    return result.Body;
+    const result = await s3.send(
+      new GetObjectCommand({
+        Bucket: bucket,
+        Key: key,
+      }),
+    );
+
+    console.log("S3 GET SUCCESS");
+    console.log("S3 ContentType:", result.ContentType);
+    console.log("S3 ContentLength:", result.ContentLength);
+    console.log("===================================");
+
+    if (result.Body instanceof Readable) {
+      return result.Body;
+    }
+
+    return Readable.fromWeb(result.Body);
+  } catch (error) {
+    console.error("========== S3 GET ERROR ==========");
+    console.error("Name:", error?.name);
+    console.error("Message:", error?.message);
+    console.error("Code:", error?.code);
+    console.error("Status:", error?.$metadata?.httpStatusCode);
+    console.error("Request ID:", error?.$metadata?.requestId);
+    console.error("Extended Request ID:", error?.$metadata?.extendedRequestId);
+    console.error("Attempts:", error?.$metadata?.attempts);
+    console.error("Total Retry Delay:", error?.$metadata?.totalRetryDelay);
+    console.error("Cause:", error?.cause);
+    console.error("Full Error:", error);
+    console.error("===================================");
+
+    throw error;
   }
-
-  return Readable.fromWeb(result.Body);
 }
-
 // ============================================================
 // DELETE S3 FILE
 // ============================================================
