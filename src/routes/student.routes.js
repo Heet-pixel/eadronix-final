@@ -13,9 +13,20 @@ import {
 import { groupByDay, to12h } from "../utils/scheduleUtils.js";
 import { streamSubjectAttendancePdf } from "../utils/pdfReport.js";
 import { storeDataUri } from "../utils/gridfs.js";
+import { refreshS3Url } from "../utils/s3Storage.js";
 
 const router = Router();
 router.use(requireAuth, allowRoles("student", "parent"));
+
+// Refresh the avatar URL on every outbound student object so the browser
+// always receives a valid pre-signed S3 URL and never a stale/expired one.
+// mapStudent() is synchronous so we can't call refreshS3Url inside it —
+// instead every route that sends a student object goes through this wrapper.
+async function withFreshAvatar(studentObj) {
+  if (!studentObj) return studentObj;
+  studentObj.avatar = await refreshS3Url(studentObj.avatar);
+  return studentObj;
+}
 
 function rollInRange(roll, start, end) {
   if (!start && !end) return true;
@@ -220,10 +231,13 @@ router.get(
   asyncHandler(async (req, res) => {
     const student = await currentStudent(req, res);
     if (!student) return;
+    // Always re-sign the avatar so the browser gets a fresh pre-signed S3 URL
+    // that won't 403/404. withFreshAvatar is a no-op for GridFS/public URLs.
+    const mapped = await withFreshAvatar(mapStudent(student));
     ok(res, {
       success: true,
-      student: mapStudent(student),
-      profile: mapStudent(student),
+      student: mapped,
+      profile: mapped,
     });
   }),
 );
@@ -257,7 +271,7 @@ router.post(
     await student.save();
     ok(
       res,
-      { success: true, student: mapStudent(student) },
+      { success: true, student: await withFreshAvatar(mapStudent(student)) },
       "Profile photo updated.",
     );
   }),
@@ -398,7 +412,11 @@ router.get(
       const key = String(m.subject?._id || m.subject || m.subjectName);
       if (!bySubject[key]) {
         bySubject[key] = {
-          subject: { _id: m.subject?._id, name: m.subject?.name || m.subjectName || "Unknown", code: m.subject?.code || "" },
+          subject: {
+            _id: m.subject?._id,
+            name: m.subject?.name || m.subjectName || "Unknown",
+            code: m.subject?.code || "",
+          },
           exams: [],
           totalObtained: 0,
           totalMax: 0,

@@ -18,6 +18,7 @@ import {
   hardDeleteManyCascade,
 } from "../utils/hardDelete.js";
 import { storeDataUri } from "../utils/gridfs.js";
+import { refreshS3Url } from "../utils/s3Storage.js";
 import {
   createStudent,
   ensureUser,
@@ -52,6 +53,19 @@ import {
 
 const router = Router();
 router.use(requireAuth, allowRoles("hod", "co_hod"));
+
+// Re-sign the avatar field on a single mapped student object so the HOD
+// portal always sees a valid pre-signed S3 URL instead of a stale/expired one.
+async function withFreshAvatar(studentObj) {
+  if (!studentObj) return studentObj;
+  studentObj.avatar = await refreshS3Url(studentObj.avatar);
+  return studentObj;
+}
+// Batch version for student list endpoints.
+async function withFreshAvatars(studentList) {
+  if (!Array.isArray(studentList)) return studentList;
+  return Promise.all(studentList.map(withFreshAvatar));
+}
 
 const scope = (req) => ({
   college: req.user.college,
@@ -364,9 +378,11 @@ router.get(
     filter.status =
       req.query.status === "Removed" ? "Removed" : { $ne: "Removed" };
     ok(res, {
-      students: (
-        await Student.find(filter).sort({ course: 1, sem: 1, name: 1 })
-      ).map(mapStudent),
+      students: await withFreshAvatars(
+        (await Student.find(filter).sort({ course: 1, sem: 1, name: 1 })).map(
+          mapStudent,
+        ),
+      ),
     });
   }),
 );
@@ -380,11 +396,13 @@ router.post(
     ok(
       res,
       {
-        student: mapStudent(
-          await createStudent(req.body, req.user, {
-            requireParentEmail: false,
-            requireStudentEmail: true,
-          }),
+        student: await withFreshAvatar(
+          mapStudent(
+            await createStudent(req.body, req.user, {
+              requireParentEmail: false,
+              requireStudentEmail: true,
+            }),
+          ),
         ),
       },
       "Student saved.",
@@ -419,7 +437,11 @@ router.put(
       return fail(res, e.status || 400, e.message);
     }
     if (!student) return fail(res, 404, "Student not found.");
-    ok(res, { student: mapStudent(student) }, "Student updated.");
+    ok(
+      res,
+      { student: await withFreshAvatar(mapStudent(student)) },
+      "Student updated.",
+    );
   }),
 );
 // DELETE = permanent. The record is actually removed from the database,
