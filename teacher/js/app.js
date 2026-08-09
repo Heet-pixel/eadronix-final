@@ -133,6 +133,15 @@ async function init() {
   // Render identity into the UI
   _applyIdentity();
 
+  // Warm the offline cache for the student roster of EVERY class this
+  // teacher can pick in Mark Attendance — not just whichever one they
+  // happen to open first. Without this, only the last-viewed Course+
+  // Semester combo was cached, so picking a different class while offline
+  // (e.g. no Wi-Fi in the classroom right before a different lecture)
+  // still failed with "Failed to load students." Fire-and-forget: it runs
+  // in the background and must never block the dashboard from loading.
+  warmAttendanceRosterCache();
+
   // Pre-load existing syllabus entries from backend
   try {
     const sd = await TAPI.getSyllabus();
@@ -202,6 +211,39 @@ function classesFromSubjects(subjects) {
     course,
     semesters: [...sems].filter(Boolean).sort((a, b) => a - b),
   }));
+}
+
+// Pre-fetches (and therefore, via OfflineDataCache, pre-caches) the
+// /teacher/students roster for every Course+Semester this teacher teaches,
+// right after login while the connection is known-good. This is what
+// actually makes "select a class and mark attendance" work offline for
+// ANY of a teacher's classes, not just the one already open when the
+// connection dropped. Runs quietly in the background; a slow/failed
+// fetch for one class doesn't stop the others from being warmed, and the
+// normal lazy fetch in attendance.js's ensureClassStudentsLoaded() still
+// covers it (and refreshes the cache) whenever a class IS opened online.
+async function warmAttendanceRosterCache() {
+  if (!window.OfflineDataCache) return; // add-on not loaded — nothing to warm
+  const seen = new Set();
+  const combos = [];
+  (teacherClasses || []).forEach((c) => {
+    (c.semesters || []).forEach((s) => {
+      const key = c.course + "|" + s;
+      if (!seen.has(key)) {
+        seen.add(key);
+        combos.push({ course: c.course, semester: s });
+      }
+    });
+  });
+  for (const { course, semester } of combos) {
+    try {
+      const q = new URLSearchParams({ course, semester }).toString();
+      await TAPI.getStudents(q);
+    } catch (_) {
+      // Non-critical — move on to the next class; this one will just get
+      // cached the next time it's opened online instead.
+    }
+  }
 }
 
 function populateClassSelectors() {
