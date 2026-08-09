@@ -219,8 +219,11 @@ export async function getS3FileMeta(key) {
 //   return Readable.fromWeb(result.Body);
 // }
 export async function openS3DownloadStream(key) {
-  const s3 = getClient();
+  console.log("🔥🔥🔥 OPEN S3 FUNCTION CALLED 🔥🔥🔥");
+  console.log("S3 KEY:", key);
 
+  const s3 = getClient();
+=
   if (!s3 || !key) {
     return null;
   }
