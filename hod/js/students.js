@@ -149,7 +149,7 @@ function studentRowHTML(s) {
     .toUpperCase();
   const status = s.status || "Active";
   const avatarHtml = s.avatar
-    ? `<img class="student-avatar" src="${s.avatar}" alt="${_html(s.name || "Student")}" onclick="openStudentModal('${s.id}')">`
+    ? `<img class="student-avatar" src="${s.avatar}" alt="" onclick="openStudentModal('${s.id}')" onerror="avatarFallback(this, '${initials}')">`
     : `<div class="student-avatar student-avatar-initials" onclick="openStudentModal('${s.id}')">${initials}</div>`;
   return `<div class="student-row" id="srow_${s.id}">
     <div class="chk-col ${stuDeleteMode || stuPromoteMode ? "show" : ""}"><input type="checkbox" onchange="${stuPromoteMode ? "updateStuPromoteSelectedCount()" : "updateStuSelectedCount()"}" id="chk_${s.id}"></div>
@@ -559,7 +559,7 @@ function renderRemovedList() {
         .substring(0, 2)
         .toUpperCase();
       const avatarHtml = s.avatar
-        ? `<img class="student-avatar" src="${s.avatar}" alt="${_html(s.name || "Student")}">`
+        ? `<img class="student-avatar" src="${s.avatar}" alt="" onerror="avatarFallback(this, '${initials}')">`
         : `<div class="student-avatar student-avatar-initials">${initials}</div>`;
       html += `<div class="student-row">
         <div class="chk-col ${removedRecoverMode ? "show" : ""}"><input type="checkbox" onchange="updateRemovedSelectedCount()" id="rchk_${s.id}"></div>
