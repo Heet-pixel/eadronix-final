@@ -12,7 +12,7 @@ import {
 } from "../controllers/common.js";
 import { groupByDay, to12h } from "../utils/scheduleUtils.js";
 import { streamSubjectAttendancePdf } from "../utils/pdfReport.js";
-import { storeDataUri } from "../utils/gridfs.js";
+import { storeDataUri, storeAvatarDataUri } from "../utils/gridfs.js";
 import { refreshS3Url } from "../utils/s3Storage.js";
 
 const router = Router();
@@ -263,10 +263,11 @@ router.post(
     } catch (e) {
       return fail(res, e.status || 400, e.message);
     }
-    student.avatar = await storeDataUri(
-      avatar,
-      `student-${student._id}-avatar`,
-    );
+    // Store avatar as base64 directly in MongoDB — bypasses S3 entirely.
+    // Avatars are already compressed to ≤100 KB by the frontend, so inline
+    // storage is fine. S3 requires GetObject permission to read back; storing
+    // inline avoids that dependency and makes the photo work immediately.
+    student.avatar = storeAvatarDataUri(avatar);
     student.updatedBy = req.user.id;
     await student.save();
     ok(

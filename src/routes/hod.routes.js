@@ -17,7 +17,7 @@ import {
   hardDeleteCascade,
   hardDeleteManyCascade,
 } from "../utils/hardDelete.js";
-import { storeDataUri } from "../utils/gridfs.js";
+import { storeDataUri, storeAvatarDataUri } from "../utils/gridfs.js";
 import { refreshS3Url } from "../utils/s3Storage.js";
 import {
   createStudent,
@@ -288,7 +288,7 @@ router.post(
     } catch (e) {
       return fail(res, e.status || 400, e.message);
     }
-    req.user.avatar = await storeDataUri(avatar, `hod-${req.user.id}-avatar`);
+    req.user.avatar = storeAvatarDataUri(avatar);
     req.user.updatedBy = req.user.id;
     await req.user.save();
     const profile = await buildHodProfile(req.user);

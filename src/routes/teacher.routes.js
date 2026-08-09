@@ -21,7 +21,7 @@ import {
   isRollWithinRange,
 } from "../controllers/common.js";
 import { hardDeleteCascade } from "../utils/hardDelete.js";
-import { storeDataUri } from "../utils/gridfs.js";
+import { storeDataUri, storeAvatarDataUri } from "../utils/gridfs.js";
 import { groupByDay } from "../utils/scheduleUtils.js";
 import { streamAttendanceReportPdf } from "../utils/pdfReport.js";
 
@@ -82,10 +82,7 @@ router.post(
     } catch (e) {
       return fail(res, e.status || 400, e.message);
     }
-    req.user.avatar = await storeDataUri(
-      avatar,
-      `teacher-${req.user.id}-avatar`,
-    );
+    req.user.avatar = storeAvatarDataUri(avatar);
     req.user.updatedBy = req.user.id;
     await req.user.save();
     ok(res, { success: true, profile: req.user }, "Profile photo updated.");
