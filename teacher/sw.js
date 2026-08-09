@@ -17,7 +17,7 @@
 // network, exactly as they do today.
 // ════════════════════════════════════════════════════════════════════════
 
-const CACHE_NAME = "eadronix-teacher-shell-v1";
+const CACHE_NAME = "eadronix-teacher-shell-v2";
 const SCOPE = "/teacher/";
 
 const APP_SHELL = [
@@ -42,6 +42,7 @@ const APP_SHELL = [
   "/teacher/js/schedule.js",
   "/teacher/js/notices.js",
   "/shared/js/offline-sync.js",
+  "/shared/js/offline-data-cache.js",
 ];
 
 self.addEventListener("install", (event) => {

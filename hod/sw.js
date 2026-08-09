@@ -17,7 +17,7 @@
 // network, exactly as they do today.
 // ════════════════════════════════════════════════════════════════════════
 
-const CACHE_NAME = "eadronix-hod-shell-v1";
+const CACHE_NAME = "eadronix-hod-shell-v2";
 const SCOPE = "/hod/";
 
 const APP_SHELL = [
@@ -45,6 +45,7 @@ const APP_SHELL = [
   "/hod/js/cc.js",
   "/hod/js/modals.js",
   "/shared/js/offline-sync.js",
+  "/shared/js/offline-data-cache.js",
 ];
 
 self.addEventListener("install", (event) => {
