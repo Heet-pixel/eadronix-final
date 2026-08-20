@@ -630,5 +630,37 @@
 <script src="js/schedule.js"></script>
 <script src="js/notices.js"></script>
 
+<!-- 8. Offline PWA support: registers the Service Worker (teacher/sw.js)
+     so the app shell (this HTML/CSS/JS) still opens with no internet,
+     and so a queued offline attendance record can be uploaded in the
+     background even if this tab gets closed (Background Sync). Must run
+     after the offline-sync.js queue module above is loaded, and does not
+     block anything else on the page. -->
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker
+        .register("/teacher/sw.js", { scope: "/teacher/" })
+        .catch((err) => console.warn("[teacher] SW registration failed:", err));
+    });
+    // The Service Worker posts this after it successfully uploads one or
+    // more queued attendance records in the background (app was closed
+    // at the time). Surface it with the same toast used everywhere else.
+    navigator.serviceWorker.addEventListener("message", (event) => {
+      if (event.data && event.data.type === "eadronix:offline-sync") {
+        const n = event.data.synced;
+        if (typeof showToast === "function") {
+          showToast(
+            n === 1
+              ? "1 offline attendance record uploaded successfully ✅"
+              : `${n} offline attendance records uploaded successfully ✅`,
+          );
+        }
+        if (typeof loadDashboard === "function") loadDashboard();
+      }
+    });
+  }
+</script>
+
 </body>
 </html>
